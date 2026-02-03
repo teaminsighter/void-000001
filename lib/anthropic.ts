@@ -2,8 +2,11 @@
 // VOID — Anthropic Claude API Helper
 // ══════════════════════════════════════
 
-// Note: Install @anthropic-ai/sdk before Layer 4
-// npm install @anthropic-ai/sdk
+import Anthropic from '@anthropic-ai/sdk';
+
+const client = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
 
 interface Message {
   role: 'user' | 'assistant';
@@ -31,26 +34,19 @@ export async function chat(
   systemPrompt: string,
   options: ChatOptions = {}
 ): Promise<string> {
-  // This will be implemented in Layer 4 when we connect to real APIs
-  // For now, return a mock response
-
-  const lastMessage = messages[messages.length - 1]?.content || '';
-
-  console.log('[Anthropic] Would send:', {
+  const response = await client.messages.create({
     model: options.model || DEFAULT_MODEL,
-    maxTokens: options.maxTokens || DEFAULT_MAX_TOKENS,
-    systemPrompt: systemPrompt.substring(0, 100) + '...',
-    messageCount: messages.length,
+    max_tokens: options.maxTokens || DEFAULT_MAX_TOKENS,
+    system: systemPrompt,
+    messages: messages.map(m => ({
+      role: m.role,
+      content: m.content,
+    })),
   });
 
-  // Mock response for development
-  return `I received your message: "${lastMessage.substring(0, 50)}..."
-
-This is a mock response. Real Claude API integration will be added in Layer 4.
-
-✓ Message received
-✓ Context would be injected from Khoj
-✓ Actions would be parsed and executed via n8n`;
+  // Extract text from response
+  const textBlock = response.content.find(block => block.type === 'text');
+  return textBlock && textBlock.type === 'text' ? textBlock.text : '';
 }
 
 /**
@@ -65,16 +61,28 @@ export async function streamChat(
   systemPrompt: string,
   onChunk: (chunk: string) => void,
   options: ChatOptions = {}
-): Promise<void> {
-  // Streaming will be implemented in Layer 4
-  const response = await chat(messages, systemPrompt, options);
+): Promise<string> {
+  const stream = await client.messages.stream({
+    model: options.model || DEFAULT_MODEL,
+    max_tokens: options.maxTokens || DEFAULT_MAX_TOKENS,
+    system: systemPrompt,
+    messages: messages.map(m => ({
+      role: m.role,
+      content: m.content,
+    })),
+  });
 
-  // Simulate streaming for development
-  const words = response.split(' ');
-  for (const word of words) {
-    onChunk(word + ' ');
-    await new Promise(resolve => setTimeout(resolve, 50));
+  let fullResponse = '';
+
+  for await (const event of stream) {
+    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+      const text = event.delta.text;
+      fullResponse += text;
+      onChunk(text);
+    }
   }
+
+  return fullResponse;
 }
 
 export { DEFAULT_MODEL, DEFAULT_MAX_TOKENS };
