@@ -1,0 +1,14 @@
+{
+  "name": "Khoj Re-indexer",
+  "nodes": [],
+  "connections": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "placeholder",
+  "meta": {
+    "description": "Triggers Khoj to re-index vault every 6 hours.",
+    "status": "placeholder - build in Layer 6"
+  }
+}

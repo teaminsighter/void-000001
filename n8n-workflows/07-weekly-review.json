@@ -1,0 +1,14 @@
+{
+  "name": "Weekly Review",
+  "nodes": [],
+  "connections": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "placeholder",
+  "meta": {
+    "description": "Generates weekly review every Sunday at 10PM.",
+    "status": "placeholder - build in Layer 6"
+  }
+}

@@ -1,0 +1,85 @@
+# ══════════════════════════════════════
+# VOID — Khoj Stack
+# AI-powered semantic search for vault
+# ══════════════════════════════════════
+
+version: '3.8'
+
+services:
+  # PostgreSQL with pgvector for embeddings
+  khoj-db:
+    image: pgvector/pgvector:pg16
+    container_name: khoj-db
+    environment:
+      POSTGRES_DB: khoj
+      POSTGRES_USER: khoj
+      POSTGRES_PASSWORD: ${KHOJ_DB_PASSWORD}
+    volumes:
+      - khoj_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U khoj"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - void-network
+
+  # SearXNG for private web search
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    environment:
+      - SEARXNG_BASE_URL=http://searxng:8080
+    volumes:
+      - searxng_data:/etc/searxng
+    restart: unless-stopped
+    networks:
+      - void-network
+
+  # Khoj - AI semantic search
+  khoj:
+    image: ghcr.io/khoj-ai/khoj:latest
+    container_name: khoj
+    depends_on:
+      khoj-db:
+        condition: service_healthy
+      searxng:
+        condition: service_started
+    ports:
+      - "42110:42110"
+    environment:
+      # Admin setup
+      KHOJ_ADMIN_EMAIL: ${KHOJ_ADMIN_EMAIL}
+      KHOJ_ADMIN_PASSWORD: ${KHOJ_ADMIN_PASSWORD}
+      KHOJ_DJANGO_SECRET_KEY: ${KHOJ_SECRET_KEY}
+
+      # Database
+      POSTGRES_HOST: khoj-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: khoj
+      POSTGRES_USER: khoj
+      POSTGRES_PASSWORD: ${KHOJ_DB_PASSWORD}
+
+      # AI
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+
+      # Search
+      SEARXNG_URL: http://searxng:8080
+    volumes:
+      # Mount vault as read-only for indexing
+      - ${VAULT_PATH}:/data/vault:ro
+      # Cache for ML models
+      - khoj_models:/root/.cache/torch
+    restart: unless-stopped
+    networks:
+      - void-network
+
+volumes:
+  khoj_db_data:
+  khoj_models:
+  searxng_data:
+
+networks:
+  void-network:
+    driver: bridge

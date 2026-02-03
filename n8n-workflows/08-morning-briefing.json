@@ -1,0 +1,14 @@
+{
+  "name": "Morning Briefing",
+  "nodes": [],
+  "connections": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "placeholder",
+  "meta": {
+    "description": "Sends morning briefing at 8AM with calendar, tasks, and priorities.",
+    "status": "placeholder - build in Layer 6"
+  }
+}

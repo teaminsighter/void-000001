@@ -1,0 +1,7 @@
+# Dashboard components will be added in Layer 3
+# - StatCard.tsx
+# - TaskList.tsx
+# - EmailPreview.tsx
+# - VaultRecent.tsx
+# - PipelineMini.tsx
+# - QuickActions.tsx

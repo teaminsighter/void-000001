@@ -1,0 +1,14 @@
+{
+  "name": "Email Manager",
+  "nodes": [],
+  "connections": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "placeholder",
+  "meta": {
+    "description": "Reads and sends emails via Gmail API.",
+    "status": "placeholder - build in Layer 6"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "Health Monitor",
+  "nodes": [],
+  "connections": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "placeholder",
+  "meta": {
+    "description": "Checks service health every 15 minutes and alerts on failure.",
+    "status": "placeholder - build in Layer 6"
+  }
+}

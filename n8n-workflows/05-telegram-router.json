@@ -1,0 +1,14 @@
+{
+  "name": "Telegram Router",
+  "nodes": [],
+  "connections": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "placeholder",
+  "meta": {
+    "description": "Routes Telegram commands (/plan, /log, /search, /remind) to appropriate workflows.",
+    "status": "placeholder - build in Layer 6"
+  }
+}

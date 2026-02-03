@@ -1,0 +1,77 @@
+# ══════════════════════════════════════
+# VOID — n8n Stack
+# Automation workflow engine
+# ══════════════════════════════════════
+
+version: '3.8'
+
+services:
+  # PostgreSQL for n8n
+  n8n-db:
+    image: postgres:16-alpine
+    container_name: n8n-db
+    environment:
+      POSTGRES_DB: n8n
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: ${N8N_DB_PASSWORD}
+    volumes:
+      - n8n_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U n8n"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - void-network
+
+  # n8n - Workflow automation
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    depends_on:
+      n8n-db:
+        condition: service_healthy
+    ports:
+      - "5678:5678"
+    environment:
+      # Database
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: n8n-db
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD}
+
+      # Security
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+
+      # Webhooks
+      WEBHOOK_URL: ${N8N_WEBHOOK_URL}
+      N8N_HOST: 0.0.0.0
+      N8N_PORT: 5678
+      N8N_PROTOCOL: https
+
+      # Timezone
+      GENERIC_TIMEZONE: ${TIMEZONE:-Asia/Dhaka}
+      TZ: ${TIMEZONE:-Asia/Dhaka}
+
+      # Execution
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_MAX_AGE: 336
+    volumes:
+      # n8n data
+      - n8n_data:/home/node/.n8n
+      # Mount vault for file operations
+      - ${VAULT_PATH}:/vault
+    restart: unless-stopped
+    networks:
+      - void-network
+
+volumes:
+  n8n_db_data:
+  n8n_data:
+
+networks:
+  void-network:
+    external: true

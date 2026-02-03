@@ -1,0 +1,61 @@
+# ══════════════════════════════════════
+# VOID — Syncthing Stack
+# P2P file synchronization for vault
+# ══════════════════════════════════════
+
+version: '3.8'
+
+services:
+  # Syncthing - P2P sync
+  syncthing:
+    image: syncthing/syncthing:latest
+    container_name: syncthing
+    hostname: void-vps
+    ports:
+      # Web UI
+      - "8384:8384"
+      # Sync protocol (TCP + UDP)
+      - "22000:22000/tcp"
+      - "22000:22000/udp"
+      # Local discovery
+      - "21027:21027/udp"
+    environment:
+      # Run as root to access all files
+      PUID: 0
+      PGID: 0
+    volumes:
+      # Vault folder to sync
+      - ${VAULT_PATH}:/var/syncthing/vault
+      # Syncthing config
+      - syncthing_config:/var/syncthing/config
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8384/rest/noauth/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - void-network
+
+volumes:
+  syncthing_config:
+
+networks:
+  void-network:
+    external: true
+
+# ══════════════════════════════════════
+# SETUP NOTES:
+#
+# 1. After starting, access web UI at :8384
+# 2. Set admin password immediately
+# 3. Note your Device ID
+# 4. On your local machine:
+#    - Install Syncthing
+#    - Add remote device using VPS Device ID
+#    - Share the vault folder
+# 5. Accept connection on VPS
+# 6. Wait for initial sync
+#
+# Your vault will now sync automatically!
+# ══════════════════════════════════════

@@ -1,0 +1,14 @@
+{
+  "name": "Daily Plan Creator",
+  "nodes": [],
+  "connections": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "placeholder",
+  "meta": {
+    "description": "Creates daily plan using Claude API and saves to vault. Triggered by webhook or 8AM cron.",
+    "status": "placeholder - build in Layer 6"
+  }
+}

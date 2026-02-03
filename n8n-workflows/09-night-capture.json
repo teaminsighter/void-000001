@@ -1,0 +1,14 @@
+{
+  "name": "Night Capture",
+  "nodes": [],
+  "connections": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "placeholder",
+  "meta": {
+    "description": "Prompts for end-of-day reflection at 9PM.",
+    "status": "placeholder - build in Layer 6"
+  }
+}

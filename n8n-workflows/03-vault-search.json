@@ -1,0 +1,14 @@
+{
+  "name": "Vault Search",
+  "nodes": [],
+  "connections": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "placeholder",
+  "meta": {
+    "description": "Searches vault using Khoj semantic search API.",
+    "status": "placeholder - build in Layer 6"
+  }
+}

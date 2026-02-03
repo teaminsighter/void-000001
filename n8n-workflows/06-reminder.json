@@ -1,0 +1,14 @@
+{
+  "name": "Reminder Scheduler",
+  "nodes": [],
+  "connections": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "placeholder",
+  "meta": {
+    "description": "Schedules time-based reminders sent via Telegram.",
+    "status": "placeholder - build in Layer 6"
+  }
+}

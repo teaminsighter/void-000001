@@ -1,0 +1,14 @@
+{
+  "name": "CRM Query",
+  "nodes": [],
+  "connections": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "placeholder",
+  "meta": {
+    "description": "Queries CRM data from HubSpot or Pipedrive.",
+    "status": "placeholder - build in Layer 6"
+  }
+}

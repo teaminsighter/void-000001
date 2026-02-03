@@ -1,0 +1,21 @@
+# ══════════════════════════════════════
+# VOID — Main Docker Compose
+# Includes all services for production deployment
+# ══════════════════════════════════════
+
+version: '3.8'
+
+# Import all service definitions
+include:
+  - docker-compose.khoj.yml
+  - docker-compose.n8n.yml
+  - docker-compose.sync.yml
+
+# Note: This file orchestrates all services together
+# For individual service deployment, use the specific compose files
+#
+# Usage:
+#   docker-compose up -d                    # Start all services
+#   docker-compose -f docker-compose.khoj.yml up -d  # Start only Khoj
+#   docker-compose logs -f n8n              # View n8n logs
+#   docker-compose down                     # Stop all services

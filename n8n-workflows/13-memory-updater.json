@@ -1,0 +1,14 @@
+{
+  "name": "Memory Updater",
+  "nodes": [],
+  "connections": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "placeholder",
+  "meta": {
+    "description": "Updates agent memory files and triggers Khoj re-index.",
+    "status": "placeholder - build in Layer 6"
+  }
+}
