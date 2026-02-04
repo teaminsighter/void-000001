@@ -32,7 +32,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
         {/* Page content */}
         <main className="flex-1 overflow-auto">
-          <div className="animate-fadeIn">{children}</div>
+          {children}
         </main>
       </div>
 

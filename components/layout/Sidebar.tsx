@@ -65,21 +65,13 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <Link
               key={page.id}
               href={page.path}
-              className="flex items-center gap-2.5 rounded-md mb-0.5 transition-colors"
+              prefetch={true}
+              className={`flex items-center gap-2.5 rounded-md mb-0.5 transition-colors ${
+                isActive ? "nav-link-active" : "nav-link"
+              }`}
               style={{
                 padding: collapsed ? "9px 0" : "9px 10px",
                 justifyContent: collapsed ? "center" : "flex-start",
-                background: isActive ? "rgba(245, 158, 11, 0.05)" : "transparent",
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.background = "transparent";
-                }
               }}
             >
               <span

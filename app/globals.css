@@ -156,3 +156,39 @@ body {
 .font-mono {
   font-family: var(--font-mono);
 }
+
+/* Navigation links */
+.nav-link {
+  background: transparent;
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.nav-link-active {
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.nav-link-active:hover {
+  background: rgba(245, 158, 11, 0.05);
+}
+
+/* Topbar buttons */
+.search-btn {
+  border-color: var(--void-border);
+}
+
+.search-btn:hover {
+  border-color: #27272a;
+}
+
+.agent-btn {
+  background: rgba(245, 158, 11, 0.06);
+  border-color: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.agent-btn:hover {
+  background: rgba(245, 158, 11, 0.12);
+}

@@ -40,18 +40,11 @@ export default function Topbar({ onSearchClick }: TopbarProps) {
         {/* Search bar (clickable) */}
         <button
           onClick={onSearchClick}
-          className="flex items-center gap-2 rounded-md border transition-colors"
+          className="flex items-center gap-2 rounded-md border transition-colors search-btn"
           style={{
             padding: "5px 12px",
             minWidth: 200,
             background: "#111218",
-            borderColor: "var(--void-border)",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "#27272a";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "var(--void-border)";
           }}
         >
           <span style={{ fontSize: 11, color: "#3f3f46" }}>
@@ -74,19 +67,11 @@ export default function Topbar({ onSearchClick }: TopbarProps) {
         {/* Agent button */}
         <Link
           href="/agent"
-          className="flex items-center gap-1 rounded-md border font-semibold transition-colors"
+          prefetch={true}
+          className="flex items-center gap-1 rounded-md border font-semibold transition-colors agent-btn"
           style={{
             padding: "5px 12px",
             fontSize: 11,
-            background: "rgba(245, 158, 11, 0.06)",
-            borderColor: "rgba(245, 158, 11, 0.2)",
-            color: "#f59e0b",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(245, 158, 11, 0.12)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(245, 158, 11, 0.06)";
           }}
         >
           <span>◉</span>
