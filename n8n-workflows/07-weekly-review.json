@@ -1,14 +1,113 @@
 {
   "name": "Weekly Review",
-  "nodes": [],
-  "connections": {},
-  "active": false,
-  "settings": {
-    "executionOrder": "v1"
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "cronExpression", "expression": "0 22 * * 0"}]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Sunday 10PM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = $now;\nconst weekStart = today.minus({days: 6});\n\nconst dailyFiles = [];\nfor (let i = 0; i < 7; i++) {\n  const date = weekStart.plus({days: i}).toFormat('yyyy-MM-dd');\n  dailyFiles.push(`/vault/01-Daily/${date}.md`);\n}\n\nreturn {json: {dailyFiles, weekStart: weekStart.toFormat('yyyy-MM-dd'), weekEnd: today.toFormat('yyyy-MM-dd')}};"
+      },
+      "id": "get-week-dates",
+      "name": "Get Week Dates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "filePath": "/vault/07-Agent-Memory/goals.md",
+        "options": {}
+      },
+      "id": "read-goals",
+      "name": "Read Goals",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "anthropic-version", "value": "2023-06-01"},
+            {"name": "content-type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 2048,\n  \"system\": \"You are Void, generating a weekly review. Summarize accomplishments, identify patterns, note what went well and what could improve. Be encouraging but honest. Format with clear sections and bullet points.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Generate my weekly review.\\n\\nWeek: {{ $('Get Week Dates').first().json.weekStart }} to {{ $('Get Week Dates').first().json.weekEnd }}\\n\\nMy goals:\\n{{ $json.data }}\\n\\nPlease analyze the week and provide:\\n1. Key accomplishments\\n2. Progress on goals\\n3. Patterns noticed\\n4. Areas for improvement\\n5. Focus for next week\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-review",
+      "name": "Claude - Generate Review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 300],
+      "credentials": {"httpHeaderAuth": {"id": "anthropic-api", "name": "Anthropic API"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst reviewText = response.content[0].text;\nconst weekEnd = $('Get Week Dates').first().json.weekEnd;\n\nconst fileContent = `---\\ndate: ${weekEnd}\\ntype: weekly-review\\n---\\n\\n# Weekly Review — ${weekEnd}\\n\\n${reviewText}\\n`;\n\nreturn {json: {content: fileContent, filePath: `/vault/06-Reviews/week-${weekEnd}.md`, summary: reviewText.substring(0, 500)}};"
+      },
+      "id": "format-review",
+      "name": "Format Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "filePath": "={{ $json.filePath }}",
+        "fileContent": "={{ $json.content }}",
+        "options": {}
+      },
+      "id": "write-review",
+      "name": "Write Review",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [1500, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=📊 **Weekly Review Ready**\\n\\n{{ $('Format Review').first().json.summary }}\\n\\n✓ Saved to vault",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "telegram-notify",
+      "name": "Telegram Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1750, 300],
+      "credentials": {"telegramApi": {"id": "telegram-bot", "name": "Telegram Bot"}}
+    }
+  ],
+  "connections": {
+    "Sunday 10PM Trigger": {"main": [[{"node": "Get Week Dates", "type": "main", "index": 0}]]},
+    "Get Week Dates": {"main": [[{"node": "Read Goals", "type": "main", "index": 0}]]},
+    "Read Goals": {"main": [[{"node": "Claude - Generate Review", "type": "main", "index": 0}]]},
+    "Claude - Generate Review": {"main": [[{"node": "Format Review", "type": "main", "index": 0}]]},
+    "Format Review": {"main": [[{"node": "Write Review", "type": "main", "index": 0}]]},
+    "Write Review": {"main": [[{"node": "Telegram Notification", "type": "main", "index": 0}]]}
   },
-  "versionId": "placeholder",
-  "meta": {
-    "description": "Generates weekly review every Sunday at 10PM.",
-    "status": "placeholder - build in Layer 6"
-  }
+  "active": false,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true},
+  "versionId": "1",
+  "meta": {"instanceId": "void-automation"},
+  "tags": [{"name": "void-core"}]
 }

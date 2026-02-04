@@ -1,14 +1,75 @@
 {
   "name": "Morning Briefing",
-  "nodes": [],
-  "connections": {},
-  "active": false,
-  "settings": {
-    "executionOrder": "v1"
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "cronExpression", "expression": "0 8 * * *"}]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Daily 8AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "filePath": "={{ '/vault/01-Daily/' + $now.toFormat('yyyy-MM-dd') + '.md' }}",
+        "options": {}
+      },
+      "id": "read-today",
+      "name": "Read Today Note",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "filePath": "/vault/07-Agent-Memory/priorities.md",
+        "options": {}
+      },
+      "id": "read-priorities",
+      "name": "Read Priorities",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [500, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = $('Read Today Note').first().json.data || 'No daily note yet';\nconst priorities = $('Read Priorities').first().json.data || 'No priorities set';\nconst date = $now.toFormat('cccc, LLLL d');\nconst time = $now.toFormat('h:mm a');\n\n// Extract tasks from today's note\nconst taskMatch = today.match(/## Tasks([\\s\\S]*?)(?=##|$)/);\nconst tasks = taskMatch ? taskMatch[1].trim() : 'No tasks';\n\nconst briefing = `☀️ **Morning Briefing**\\n📅 ${date}\\n\\n**Today's Tasks:**\\n${tasks}\\n\\n**Current Priorities:**\\n${priorities.substring(0, 500)}\\n\\n---\\nHave a productive day!`;\n\nreturn {json: {briefing, date}};"
+      },
+      "id": "compile-briefing",
+      "name": "Compile Briefing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.briefing }}",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "send-briefing",
+      "name": "Send Briefing",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1000, 300],
+      "credentials": {"telegramApi": {"id": "telegram-bot", "name": "Telegram Bot"}}
+    }
+  ],
+  "connections": {
+    "Daily 8AM Trigger": {"main": [[{"node": "Read Today Note", "type": "main", "index": 0}], [{"node": "Read Priorities", "type": "main", "index": 0}]]},
+    "Read Today Note": {"main": [[{"node": "Compile Briefing", "type": "main", "index": 0}]]},
+    "Read Priorities": {"main": [[{"node": "Compile Briefing", "type": "main", "index": 0}]]},
+    "Compile Briefing": {"main": [[{"node": "Send Briefing", "type": "main", "index": 0}]]}
   },
-  "versionId": "placeholder",
-  "meta": {
-    "description": "Sends morning briefing at 8AM with calendar, tasks, and priorities.",
-    "status": "placeholder - build in Layer 6"
-  }
+  "active": false,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true},
+  "versionId": "1",
+  "meta": {"instanceId": "void-automation"},
+  "tags": [{"name": "void-core"}]
 }

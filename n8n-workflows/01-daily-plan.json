@@ -1,14 +1,250 @@
 {
   "name": "Daily Plan Creator",
-  "nodes": [],
-  "connections": {},
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "plan",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "plan-webhook"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Daily 8AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 500]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "filePath": "/vault/07-Agent-Memory/preferences.md",
+        "options": {}
+      },
+      "id": "read-preferences",
+      "name": "Read Preferences",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [500, 400]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "filePath": "={{ '/vault/01-Daily/' + $now.minus({days: 1}).toFormat('yyyy-MM-dd') + '.md' }}",
+        "options": {}
+      },
+      "id": "read-yesterday",
+      "name": "Read Yesterday Note",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [500, 550]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 2048,\n  \"system\": \"You are Void, a personal AI assistant. Create a daily plan based on the user's preferences and yesterday's notes. Format the plan with time blocks (08:00, 09:00, etc.) and use emojis for visual scanning. Be direct and practical.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Create my daily plan for today.\\n\\nMy preferences:\\n{{ $('Read Preferences').item.json.data }}\\n\\nYesterday's notes:\\n{{ $('Read Yesterday Note').item.json.data }}\\n\\nUser input: {{ $('Webhook Trigger').item.json.body.input || 'Standard day' }}\\n\\nToday is {{ $now.toFormat('cccc, LLLL d, yyyy') }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-api",
+      "name": "Claude API - Generate Plan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [750, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "anthropic-api",
+          "name": "Anthropic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst planText = response.content[0].text;\nconst today = $now.toFormat('yyyy-MM-dd');\nconst dayName = $now.toFormat('cccc');\n\nconst fileContent = `---\ndate: ${today}\nday: ${dayName}\ntype: daily\n---\n\n# ${today} -- ${dayName}\n\n## Plan\n${planText}\n\n## Tasks\n- [ ] \n\n## Log\n<!-- Quick logs throughout the day -->\n\n## Notes\n<!-- Observations, thoughts -->\n`;\n\nreturn {\n  json: {\n    content: fileContent,\n    fileName: `${today}.md`,\n    filePath: `/vault/01-Daily/${today}.md`,\n    planSummary: planText.substring(0, 500)\n  }\n};"
+      },
+      "id": "format-plan",
+      "name": "Format Daily Note",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 400]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "filePath": "={{ $json.filePath }}",
+        "fileContent": "={{ $json.content }}",
+        "options": {}
+      },
+      "id": "write-daily-note",
+      "name": "Write Daily Note",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [1250, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=📅 **Daily Plan Created**\n\n{{ $('Format Daily Note').item.json.planSummary }}\n\n✓ Saved to vault",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-notify",
+      "name": "Telegram Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1500, 400],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Daily plan created\",\n  \"file\": \"{{ $('Format Daily Note').item.json.filePath }}\",\n  \"plan\": \"{{ $('Format Daily Note').item.json.planSummary }}\"\n}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1500, 250]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Preferences",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily 8AM Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Preferences",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Preferences": {
+      "main": [
+        [
+          {
+            "node": "Read Yesterday Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Yesterday Note": {
+      "main": [
+        [
+          {
+            "node": "Claude API - Generate Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude API - Generate Plan": {
+      "main": [
+        [
+          {
+            "node": "Format Daily Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Daily Note": {
+      "main": [
+        [
+          {
+            "node": "Write Daily Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Daily Note": {
+      "main": [
+        [
+          {
+            "node": "Telegram Notification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
   "active": false,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "placeholder",
+  "versionId": "1",
   "meta": {
-    "description": "Creates daily plan using Claude API and saves to vault. Triggered by webhook or 8AM cron.",
-    "status": "placeholder - build in Layer 6"
-  }
+    "instanceId": "void-automation"
+  },
+  "tags": [
+    {
+      "name": "void-core"
+    }
+  ]
 }

@@ -1,14 +1,114 @@
 {
   "name": "Night Capture",
-  "nodes": [],
-  "connections": {},
-  "active": false,
-  "settings": {
-    "executionOrder": "v1"
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "cronExpression", "expression": "0 21 * * *"}]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Daily 9PM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "🌙 **End of Day Reflection**\n\nHow was your day? Reply with:\n- What you accomplished\n- What you learned\n- Tomorrow's top priority\n\nI'll save it to your daily note.",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "send-prompt",
+      "name": "Send Reflection Prompt",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [500, 300],
+      "credentials": {"telegramApi": {"id": "telegram-bot", "name": "Telegram Bot"}}
+    },
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "id": "telegram-reply",
+      "name": "Wait for Reply",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 500],
+      "webhookId": "night-capture-reply",
+      "credentials": {"telegramApi": {"id": "telegram-bot", "name": "Telegram Bot"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $input.first().json.message;\nconst text = message.text || '';\nconst today = $now.toFormat('yyyy-MM-dd');\nconst time = $now.toFormat('HH:mm');\n\nreturn {\n  json: {\n    reflection: text,\n    filePath: `/vault/01-Daily/${today}.md`,\n    entry: `\\n\\n## Evening Reflection (${time})\\n${text}`\n  }\n};"
+      },
+      "id": "format-reflection",
+      "name": "Format Reflection",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 500]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "filePath": "={{ $json.filePath }}",
+        "options": {}
+      },
+      "id": "read-daily",
+      "name": "Read Daily Note",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [750, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json.data || '';\nconst entry = $('Format Reflection').first().json.entry;\nconst filePath = $('Format Reflection').first().json.filePath;\n\nreturn {json: {content: current + entry, filePath}};"
+      },
+      "id": "append-reflection",
+      "name": "Append Reflection",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 500]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "filePath": "={{ $json.filePath }}",
+        "fileContent": "={{ $json.content }}",
+        "options": {}
+      },
+      "id": "write-daily",
+      "name": "Write Daily Note",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [1250, 500]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "✓ Reflection saved. Good night! 🌙",
+        "additionalFields": {}
+      },
+      "id": "confirm",
+      "name": "Confirm Saved",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1500, 500],
+      "credentials": {"telegramApi": {"id": "telegram-bot", "name": "Telegram Bot"}}
+    }
+  ],
+  "connections": {
+    "Daily 9PM Trigger": {"main": [[{"node": "Send Reflection Prompt", "type": "main", "index": 0}]]},
+    "Wait for Reply": {"main": [[{"node": "Format Reflection", "type": "main", "index": 0}]]},
+    "Format Reflection": {"main": [[{"node": "Read Daily Note", "type": "main", "index": 0}]]},
+    "Read Daily Note": {"main": [[{"node": "Append Reflection", "type": "main", "index": 0}]]},
+    "Append Reflection": {"main": [[{"node": "Write Daily Note", "type": "main", "index": 0}]]},
+    "Write Daily Note": {"main": [[{"node": "Confirm Saved", "type": "main", "index": 0}]]}
   },
-  "versionId": "placeholder",
-  "meta": {
-    "description": "Prompts for end-of-day reflection at 9PM.",
-    "status": "placeholder - build in Layer 6"
-  }
+  "active": false,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true},
+  "versionId": "1",
+  "meta": {"instanceId": "void-automation"},
+  "tags": [{"name": "void-core"}]
 }

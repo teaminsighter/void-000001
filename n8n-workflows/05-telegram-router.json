@@ -1,14 +1,202 @@
 {
   "name": "Telegram Router",
-  "nodes": [],
-  "connections": {},
-  "active": false,
-  "settings": {
-    "executionOrder": "v1"
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "telegram-trigger",
+      "credentials": {"telegramApi": {"id": "telegram-bot", "name": "Telegram Bot"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $input.first().json.message;\nconst text = message.text || '';\nconst chatId = message.chat.id;\n\nlet command = 'unknown';\nlet args = '';\n\nif (text.startsWith('/plan')) {\n  command = 'plan';\n  args = text.replace('/plan', '').trim();\n} else if (text.startsWith('/log')) {\n  command = 'log';\n  args = text.replace('/log', '').trim();\n} else if (text.startsWith('/search')) {\n  command = 'search';\n  args = text.replace('/search', '').trim();\n} else if (text.startsWith('/remind')) {\n  command = 'remind';\n  args = text.replace('/remind', '').trim();\n} else if (text.startsWith('/help')) {\n  command = 'help';\n}\n\nreturn {json: {command, args, chatId, originalText: text}};"
+      },
+      "id": "parse-command",
+      "name": "Parse Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {"outputKey": "plan", "conditions": {"conditions": [{"leftValue": "={{ $json.command }}", "rightValue": "plan", "operator": {"type": "string", "operation": "equals"}}]}},
+            {"outputKey": "log", "conditions": {"conditions": [{"leftValue": "={{ $json.command }}", "rightValue": "log", "operator": {"type": "string", "operation": "equals"}}]}},
+            {"outputKey": "search", "conditions": {"conditions": [{"leftValue": "={{ $json.command }}", "rightValue": "search", "operator": {"type": "string", "operation": "equals"}}]}},
+            {"outputKey": "remind", "conditions": {"conditions": [{"leftValue": "={{ $json.command }}", "rightValue": "remind", "operator": {"type": "string", "operation": "equals"}}]}},
+            {"outputKey": "help", "conditions": {"conditions": [{"leftValue": "={{ $json.command }}", "rightValue": "help", "operator": {"type": "string", "operation": "equals"}}]}}
+          ]
+        },
+        "options": {"fallbackOutput": "extra"}
+      },
+      "id": "switch-command",
+      "name": "Route Command",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_WEBHOOK_BASE || 'http://localhost:5678/webhook' }}/plan",
+        "sendBody": true,
+        "bodyParameters": {"parameters": [{"name": "input", "value": "={{ $('Parse Command').first().json.args }}"}]},
+        "options": {}
+      },
+      "id": "call-plan",
+      "name": "Call Plan Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_WEBHOOK_BASE || 'http://localhost:5678/webhook' }}/log",
+        "sendBody": true,
+        "bodyParameters": {"parameters": [{"name": "text", "value": "={{ $('Parse Command').first().json.args }}"}]},
+        "options": {}
+      },
+      "id": "call-log",
+      "name": "Call Log Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 250]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_WEBHOOK_BASE || 'http://localhost:5678/webhook' }}/search",
+        "sendBody": true,
+        "bodyParameters": {"parameters": [{"name": "query", "value": "={{ $('Parse Command').first().json.args }}"}]},
+        "options": {}
+      },
+      "id": "call-search",
+      "name": "Call Search Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_WEBHOOK_BASE || 'http://localhost:5678/webhook' }}/remind",
+        "sendBody": true,
+        "bodyParameters": {"parameters": [{"name": "message", "value": "={{ $('Parse Command').first().json.args }}"}]},
+        "options": {}
+      },
+      "id": "call-remind",
+      "name": "Call Remind Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 550]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Command').first().json.chatId }}",
+        "text": "🤖 **Void Commands**\n\n/plan [details] - Create daily plan\n/log [text] - Quick log entry\n/search [query] - Search vault\n/remind [message] - Set reminder\n/help - Show this help",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "send-help",
+      "name": "Send Help",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1000, 700],
+      "credentials": {"telegramApi": {"id": "telegram-bot", "name": "Telegram Bot"}}
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Command').first().json.chatId }}",
+        "text": "❓ Unknown command. Type /help for available commands.",
+        "additionalFields": {}
+      },
+      "id": "send-unknown",
+      "name": "Send Unknown",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1000, 850],
+      "credentials": {"telegramApi": {"id": "telegram-bot", "name": "Telegram Bot"}}
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Command').first().json.chatId }}",
+        "text": "=✓ {{ $json.message || 'Done' }}",
+        "additionalFields": {}
+      },
+      "id": "confirm-plan",
+      "name": "Confirm Plan",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1250, 100],
+      "credentials": {"telegramApi": {"id": "telegram-bot", "name": "Telegram Bot"}}
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Command').first().json.chatId }}",
+        "text": "✓ Logged",
+        "additionalFields": {}
+      },
+      "id": "confirm-log",
+      "name": "Confirm Log",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1250, 250],
+      "credentials": {"telegramApi": {"id": "telegram-bot", "name": "Telegram Bot"}}
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Command').first().json.chatId }}",
+        "text": "=🔍 Found {{ $json.count || 0 }} results",
+        "additionalFields": {}
+      },
+      "id": "confirm-search",
+      "name": "Confirm Search",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1250, 400],
+      "credentials": {"telegramApi": {"id": "telegram-bot", "name": "Telegram Bot"}}
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Command').first().json.chatId }}",
+        "text": "⏰ Reminder set",
+        "additionalFields": {}
+      },
+      "id": "confirm-remind",
+      "name": "Confirm Remind",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1250, 550],
+      "credentials": {"telegramApi": {"id": "telegram-bot", "name": "Telegram Bot"}}
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {"main": [[{"node": "Parse Command", "type": "main", "index": 0}]]},
+    "Parse Command": {"main": [[{"node": "Route Command", "type": "main", "index": 0}]]},
+    "Route Command": {"main": [
+      [{"node": "Call Plan Workflow", "type": "main", "index": 0}],
+      [{"node": "Call Log Workflow", "type": "main", "index": 0}],
+      [{"node": "Call Search Workflow", "type": "main", "index": 0}],
+      [{"node": "Call Remind Workflow", "type": "main", "index": 0}],
+      [{"node": "Send Help", "type": "main", "index": 0}],
+      [{"node": "Send Unknown", "type": "main", "index": 0}]
+    ]},
+    "Call Plan Workflow": {"main": [[{"node": "Confirm Plan", "type": "main", "index": 0}]]},
+    "Call Log Workflow": {"main": [[{"node": "Confirm Log", "type": "main", "index": 0}]]},
+    "Call Search Workflow": {"main": [[{"node": "Confirm Search", "type": "main", "index": 0}]]},
+    "Call Remind Workflow": {"main": [[{"node": "Confirm Remind", "type": "main", "index": 0}]]}
   },
-  "versionId": "placeholder",
-  "meta": {
-    "description": "Routes Telegram commands (/plan, /log, /search, /remind) to appropriate workflows.",
-    "status": "placeholder - build in Layer 6"
-  }
+  "active": false,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true},
+  "versionId": "1",
+  "meta": {"instanceId": "void-automation"},
+  "tags": [{"name": "void-core"}]
 }

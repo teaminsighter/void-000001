@@ -1,14 +1,75 @@
 {
   "name": "Reminder Scheduler",
-  "nodes": [],
-  "connections": {},
-  "active": false,
-  "settings": {
-    "executionOrder": "v1"
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "remind",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "remind-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst message = body.message || body.text || '';\nconst timeStr = body.time || body.at || '';\n\n// Parse time (simple parser for HH:mm or relative like '30m', '1h')\nlet scheduledTime = $now;\n\nif (timeStr.match(/^\\d{1,2}:\\d{2}$/)) {\n  const [hours, mins] = timeStr.split(':').map(Number);\n  scheduledTime = $now.set({hour: hours, minute: mins, second: 0});\n  if (scheduledTime < $now) {\n    scheduledTime = scheduledTime.plus({days: 1});\n  }\n} else if (timeStr.match(/^(\\d+)m$/)) {\n  const mins = parseInt(timeStr);\n  scheduledTime = $now.plus({minutes: mins});\n} else if (timeStr.match(/^(\\d+)h$/)) {\n  const hours = parseInt(timeStr);\n  scheduledTime = $now.plus({hours: hours});\n}\n\nconst delayMs = scheduledTime.toMillis() - $now.toMillis();\n\nreturn {\n  json: {\n    message,\n    scheduledFor: scheduledTime.toISO(),\n    delayMs: Math.max(delayMs, 1000),\n    delaySeconds: Math.max(Math.floor(delayMs / 1000), 1)\n  }\n};"
+      },
+      "id": "parse-reminder",
+      "name": "Parse Reminder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Reminder scheduled\",\n  \"scheduledFor\": \"{{ $json.scheduledFor }}\"\n}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [750, 200]
+    },
+    {
+      "parameters": {
+        "amount": "={{ $json.delaySeconds }}",
+        "unit": "seconds"
+      },
+      "id": "wait-delay",
+      "name": "Wait Until Time",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [750, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=⏰ **Reminder**\n\n{{ $('Parse Reminder').first().json.message }}",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "send-reminder",
+      "name": "Send Reminder",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1000, 400],
+      "credentials": {"telegramApi": {"id": "telegram-bot", "name": "Telegram Bot"}}
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {"main": [[{"node": "Parse Reminder", "type": "main", "index": 0}]]},
+    "Parse Reminder": {"main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}], [{"node": "Wait Until Time", "type": "main", "index": 0}]]},
+    "Wait Until Time": {"main": [[{"node": "Send Reminder", "type": "main", "index": 0}]]}
   },
-  "versionId": "placeholder",
-  "meta": {
-    "description": "Schedules time-based reminders sent via Telegram.",
-    "status": "placeholder - build in Layer 6"
-  }
+  "active": false,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true},
+  "versionId": "1",
+  "meta": {"instanceId": "void-automation"},
+  "tags": [{"name": "void-core"}]
 }

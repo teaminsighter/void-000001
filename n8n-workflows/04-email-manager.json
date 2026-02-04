@@ -1,14 +1,123 @@
 {
   "name": "Email Manager",
-  "nodes": [],
-  "connections": {},
-  "active": false,
-  "settings": {
-    "executionOrder": "v1"
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "email",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "email-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "read-condition",
+              "leftValue": "={{ $json.body.action }}",
+              "rightValue": "read",
+              "operator": {"type": "string", "operation": "equals"}
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-action",
+      "name": "Check Action",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 10,
+        "filters": {"q": "is:unread", "labelIds": ["INBOX"]},
+        "options": {}
+      },
+      "id": "gmail-read",
+      "name": "Gmail - Read Inbox",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [750, 200],
+      "credentials": {"gmailOAuth2": {"id": "gmail-oauth", "name": "Gmail OAuth2"}}
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Webhook Trigger').first().json.body.to }}",
+        "subject": "={{ $('Webhook Trigger').first().json.body.subject }}",
+        "emailType": "text",
+        "message": "={{ $('Webhook Trigger').first().json.body.body }}",
+        "options": {}
+      },
+      "id": "gmail-send",
+      "name": "Gmail - Send Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [750, 400],
+      "credentials": {"gmailOAuth2": {"id": "gmail-oauth", "name": "Gmail OAuth2"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "const emails = $input.all();\nconst formatted = emails.map(e => ({\n  id: e.json.id,\n  from: e.json.from?.emailAddress || e.json.from || 'Unknown',\n  subject: e.json.subject || 'No Subject',\n  snippet: e.json.snippet || '',\n  date: e.json.date || e.json.internalDate,\n  unread: e.json.labelIds?.includes('UNREAD') || false\n}));\n\nreturn {json: {action: 'read', count: formatted.length, emails: formatted}};"
+      },
+      "id": "format-read",
+      "name": "Format Read Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "return {json: {action: 'send', success: true, to: $('Webhook Trigger').first().json.body.to, subject: $('Webhook Trigger').first().json.body.subject}};"
+      },
+      "id": "format-send",
+      "name": "Format Send Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 400]
+    },
+    {
+      "parameters": {"respondWith": "json", "responseBody": "={{ JSON.stringify($json) }}", "options": {}},
+      "id": "respond-read",
+      "name": "Respond - Read",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {"respondWith": "json", "responseBody": "={{ JSON.stringify($json) }}", "options": {}},
+      "id": "respond-send",
+      "name": "Respond - Send",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1250, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {"main": [[{"node": "Check Action", "type": "main", "index": 0}]]},
+    "Check Action": {"main": [[{"node": "Gmail - Read Inbox", "type": "main", "index": 0}], [{"node": "Gmail - Send Email", "type": "main", "index": 0}]]},
+    "Gmail - Read Inbox": {"main": [[{"node": "Format Read Response", "type": "main", "index": 0}]]},
+    "Gmail - Send Email": {"main": [[{"node": "Format Send Response", "type": "main", "index": 0}]]},
+    "Format Read Response": {"main": [[{"node": "Respond - Read", "type": "main", "index": 0}]]},
+    "Format Send Response": {"main": [[{"node": "Respond - Send", "type": "main", "index": 0}]]}
   },
-  "versionId": "placeholder",
-  "meta": {
-    "description": "Reads and sends emails via Gmail API.",
-    "status": "placeholder - build in Layer 6"
-  }
+  "active": false,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true},
+  "versionId": "1",
+  "meta": {"instanceId": "void-automation"},
+  "tags": [{"name": "void-core"}]
 }

@@ -1,14 +1,77 @@
 {
   "name": "Vault Search",
-  "nodes": [],
-  "connections": {},
-  "active": false,
-  "settings": {
-    "executionOrder": "v1"
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "search",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "search-webhook"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.KHOJ_BASE_URL || 'http://khoj:42110' }}/api/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "q", "value": "={{ $json.body.query }}"},
+            {"name": "t", "value": "={{ $json.body.type || 'markdown' }}"},
+            {"name": "n", "value": "={{ $json.body.limit || 5 }}"}
+          ]
+        },
+        "options": {}
+      },
+      "id": "khoj-search",
+      "name": "Khoj Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = $input.first().json;\nconst query = $('Webhook Trigger').first().json.body.query;\n\nconst formattedResults = Array.isArray(results) ? results.map((r, i) => ({\n  index: i + 1,\n  entry: r.entry || r.content || '',\n  file: r.file || r.source || 'unknown',\n  score: r.score || r.relevance || 0\n})) : [];\n\nreturn {\n  json: {\n    query: query,\n    count: formattedResults.length,\n    results: formattedResults\n  }\n};"
+      },
+      "id": "format-results",
+      "name": "Format Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1000, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{"node": "Khoj Search", "type": "main", "index": 0}]]
+    },
+    "Khoj Search": {
+      "main": [[{"node": "Format Results", "type": "main", "index": 0}]]
+    },
+    "Format Results": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    }
   },
-  "versionId": "placeholder",
-  "meta": {
-    "description": "Searches vault using Khoj semantic search API.",
-    "status": "placeholder - build in Layer 6"
-  }
+  "active": false,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true},
+  "versionId": "1",
+  "meta": {"instanceId": "void-automation"},
+  "tags": [{"name": "void-core"}]
 }

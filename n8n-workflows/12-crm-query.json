@@ -1,14 +1,74 @@
 {
   "name": "CRM Query",
-  "nodes": [],
-  "connections": {},
-  "active": false,
-  "settings": {
-    "executionOrder": "v1"
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crm",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "crm-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst action = body.action || 'list';\nconst query = body.query || '';\nconst limit = body.limit || 10;\n\nreturn {json: {action, query, limit}};"
+      },
+      "id": "parse-request",
+      "name": "Parse Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "filePath": "/vault/05-CRM/deals.md",
+        "options": {}
+      },
+      "id": "read-deals",
+      "name": "Read Deals File",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const content = $input.first().json.data || '';\nconst query = $('Parse Request').first().json.query.toLowerCase();\nconst action = $('Parse Request').first().json.action;\n\n// Parse deals from markdown\nconst dealRegex = /### (.+?)\\n([\\s\\S]*?)(?=### |$)/g;\nconst deals = [];\nlet match;\n\nwhile ((match = dealRegex.exec(content)) !== null) {\n  const name = match[1].trim();\n  const details = match[2].trim();\n  \n  // Extract status, value, stage from details\n  const statusMatch = details.match(/Status: (.+)/);\n  const valueMatch = details.match(/Value: \\$?([\\d,]+)/);\n  const stageMatch = details.match(/Stage: (.+)/);\n  \n  deals.push({\n    name,\n    status: statusMatch ? statusMatch[1] : 'unknown',\n    value: valueMatch ? valueMatch[1] : '0',\n    stage: stageMatch ? stageMatch[1] : 'unknown',\n    details: details.substring(0, 200)\n  });\n}\n\n// Filter by query if provided\nconst filtered = query ? deals.filter(d => \n  d.name.toLowerCase().includes(query) || \n  d.status.toLowerCase().includes(query) ||\n  d.stage.toLowerCase().includes(query)\n) : deals;\n\nreturn {\n  json: {\n    action,\n    query,\n    count: filtered.length,\n    deals: filtered\n  }\n};"
+      },
+      "id": "parse-deals",
+      "name": "Parse Deals",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {"main": [[{"node": "Parse Request", "type": "main", "index": 0}]]},
+    "Parse Request": {"main": [[{"node": "Read Deals File", "type": "main", "index": 0}]]},
+    "Read Deals File": {"main": [[{"node": "Parse Deals", "type": "main", "index": 0}]]},
+    "Parse Deals": {"main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]}
   },
-  "versionId": "placeholder",
-  "meta": {
-    "description": "Queries CRM data from HubSpot or Pipedrive.",
-    "status": "placeholder - build in Layer 6"
-  }
+  "active": false,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true},
+  "versionId": "1",
+  "meta": {"instanceId": "void-automation"},
+  "tags": [{"name": "void-core"}]
 }

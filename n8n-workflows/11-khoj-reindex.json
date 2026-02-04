@@ -1,14 +1,76 @@
 {
   "name": "Khoj Re-indexer",
-  "nodes": [],
-  "connections": {},
-  "active": false,
-  "settings": {
-    "executionOrder": "v1"
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "cronExpression", "expression": "0 */6 * * *"}]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "reindex",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 500],
+      "webhookId": "reindex-webhook"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.KHOJ_BASE_URL || 'http://khoj:42110' }}/api/update",
+        "options": {"timeout": 120000}
+      },
+      "id": "trigger-reindex",
+      "name": "Trigger Khoj Reindex",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst success = response?.status === 'ok' || response?.success === true;\n\nreturn {\n  json: {\n    success,\n    message: success ? 'Vault re-indexed successfully' : 'Re-index may have failed',\n    timestamp: $now.toISO(),\n    response\n  }\n};"
+      },
+      "id": "format-result",
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1000, 500]
+    }
+  ],
+  "connections": {
+    "Every 6 Hours": {"main": [[{"node": "Trigger Khoj Reindex", "type": "main", "index": 0}]]},
+    "Manual Trigger": {"main": [[{"node": "Trigger Khoj Reindex", "type": "main", "index": 0}]]},
+    "Trigger Khoj Reindex": {"main": [[{"node": "Format Result", "type": "main", "index": 0}]]},
+    "Format Result": {"main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]}
   },
-  "versionId": "placeholder",
-  "meta": {
-    "description": "Triggers Khoj to re-index vault every 6 hours.",
-    "status": "placeholder - build in Layer 6"
-  }
+  "active": false,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true},
+  "versionId": "1",
+  "meta": {"instanceId": "void-automation"},
+  "tags": [{"name": "void-core"}]
 }
