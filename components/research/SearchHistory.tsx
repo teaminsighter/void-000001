@@ -1,14 +1,13 @@
 "use client";
 
-interface SearchResult {
+interface HistoryItem {
   query: string;
-  vaultMatches: number;
-  webResults: number;
-  date: string;
+  timestamp: string;
+  results: number;
 }
 
 interface SearchHistoryProps {
-  history: SearchResult[];
+  history: HistoryItem[];
 }
 
 export default function SearchHistory({ history }: SearchHistoryProps) {
@@ -58,13 +57,10 @@ export default function SearchHistory({ history }: SearchHistoryProps) {
             </div>
             <div className="flex gap-3" style={{ fontSize: 10.5 }}>
               <span style={{ color: "#34d399" }}>
-                {item.vaultMatches} vault matches
-              </span>
-              <span style={{ color: "#60a5fa" }}>
-                {item.webResults} web results
+                {item.results} results
               </span>
               <span style={{ color: "#52525b", marginLeft: "auto" }}>
-                {item.date}
+                {item.timestamp}
               </span>
             </div>
           </div>

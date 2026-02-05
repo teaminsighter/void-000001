@@ -15,8 +15,8 @@ export default function TaskList({ tasks, onToggle, limit }: TaskListProps) {
   return (
     <div style={{ padding: 8 }}>
       {displayTasks.map((task) => {
-        const tagStyle = TAG_COLORS[task.tag] || { bg: "#ffffff08", color: "#71717a" };
-        const priColor = PRIORITY_COLORS[task.priority];
+        const tagStyle = task.tag ? TAG_COLORS[task.tag] : { bg: "#ffffff08", color: "#71717a" };
+        const priColor = task.priority ? PRIORITY_COLORS[task.priority] : "#71717a";
 
         return (
           <div
