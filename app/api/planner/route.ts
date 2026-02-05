@@ -97,7 +97,10 @@ HH:MM — Task description
 
 Be realistic with time blocks. Include breaks.`;
 
-      const plan = await chat([{ role: 'user', content: prompt }]);
+      const plan = await chat(
+        [{ role: 'user', content: prompt }],
+        'You are a personal productivity assistant. Create realistic, focused daily plans with time blocks. Be concise and practical.'
+      );
 
       // Save to vault
       await appendToLog(`Generated daily plan`);
