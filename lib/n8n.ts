@@ -18,6 +18,7 @@ interface WorkflowResponse {
   success: boolean;
   data?: unknown;
   error?: string;
+  mock?: boolean;
 }
 
 /**
