@@ -1,8 +1,15 @@
 // ══════════════════════════════════════
-// VOID — Khoj API Helper
+// VOID — Vault Search Helper
 // ══════════════════════════════════════
+// Works WITHOUT Khoj — uses local file search + Claude
+// Can connect to Khoj later for semantic search
+
+import { promises as fs } from 'fs';
+import path from 'path';
 
 const KHOJ_BASE = process.env.KHOJ_BASE_URL || 'http://localhost:42110';
+const VAULT_PATH = process.env.VAULT_PATH || './vault-template';
+const USE_KHOJ = process.env.USE_KHOJ === 'true'; // Set to 'true' to enable Khoj
 
 interface SearchResult {
   entry: string;
@@ -17,72 +24,218 @@ interface SearchResponse {
 }
 
 /**
- * Search the vault using Khoj semantic search
- * @param query - Search query
- * @param type - Content type (markdown, org, etc.)
- * @param limit - Maximum results to return
- * @returns Search results
+ * Search the vault
+ * - If USE_KHOJ=true: Uses Khoj semantic search
+ * - Otherwise: Uses local file search with keyword matching
  */
 export async function search(
   query: string,
   type: string = 'markdown',
   limit: number = 5
 ): Promise<SearchResponse> {
-  // This will be implemented in Layer 7 when we connect to real Khoj
-  // For now, return mock data
 
-  console.log('[Khoj] Would search:', { query, type, limit, baseUrl: KHOJ_BASE });
+  // If Khoj is enabled, use it
+  if (USE_KHOJ) {
+    return searchWithKhoj(query, type, limit);
+  }
 
-  return {
-    query,
-    count: 2,
-    results: [
-      {
-        entry: `Mock search result for: "${query}"\n\nThis would contain relevant content from your vault that semantically matches your query.`,
-        file: '01-Daily/2026-02-02.md',
-        score: 0.95,
-      },
-      {
-        entry: `Another relevant result for: "${query}"\n\nKhoj uses vector embeddings to find semantically similar content.`,
-        file: '07-Agent-Memory/preferences.md',
-        score: 0.82,
-      },
-    ],
-  };
+  // Otherwise, use local file search
+  return searchLocal(query, limit);
 }
 
 /**
- * Trigger Khoj to re-index the vault
- * @returns Success status
+ * Local file search (no Khoj needed)
+ * Searches vault files for keyword matches
+ */
+async function searchLocal(query: string, limit: number = 5): Promise<SearchResponse> {
+  const results: SearchResult[] = [];
+  const queryLower = query.toLowerCase();
+  const keywords = queryLower.split(/\s+/).filter(k => k.length > 2);
+
+  try {
+    // Get all markdown files from vault
+    const files = await getVaultFiles(VAULT_PATH);
+
+    for (const filePath of files) {
+      try {
+        const content = await fs.readFile(filePath, 'utf-8');
+        const contentLower = content.toLowerCase();
+        const relativePath = path.relative(VAULT_PATH, filePath);
+
+        // Calculate relevance score based on keyword matches
+        let score = 0;
+        let matchedContent = '';
+
+        for (const keyword of keywords) {
+          if (contentLower.includes(keyword)) {
+            score += 0.2;
+
+            // Extract snippet around the keyword
+            const index = contentLower.indexOf(keyword);
+            const start = Math.max(0, index - 100);
+            const end = Math.min(content.length, index + 200);
+            matchedContent = content.substring(start, end).trim();
+          }
+        }
+
+        // Also match file path
+        if (relativePath.toLowerCase().includes(queryLower)) {
+          score += 0.3;
+        }
+
+        if (score > 0) {
+          results.push({
+            entry: matchedContent || content.substring(0, 300),
+            file: relativePath,
+            score: Math.min(score, 1),
+          });
+        }
+      } catch {
+        // Skip files that can't be read
+      }
+    }
+
+    // Sort by score and limit results
+    results.sort((a, b) => b.score - a.score);
+    const topResults = results.slice(0, limit);
+
+    return {
+      query,
+      count: topResults.length,
+      results: topResults,
+    };
+  } catch (error) {
+    console.error('[Search] Error searching vault:', error);
+    return { query, count: 0, results: [] };
+  }
+}
+
+/**
+ * Get all markdown files from vault directory
+ */
+async function getVaultFiles(dir: string): Promise<string[]> {
+  const files: string[] = [];
+
+  try {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+
+      if (entry.isDirectory() && !entry.name.startsWith('.')) {
+        // Recursively search subdirectories
+        const subFiles = await getVaultFiles(fullPath);
+        files.push(...subFiles);
+      } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        files.push(fullPath);
+      }
+    }
+  } catch {
+    // Directory doesn't exist or can't be read
+  }
+
+  return files;
+}
+
+/**
+ * Search using Khoj API (when enabled)
+ */
+async function searchWithKhoj(
+  query: string,
+  type: string = 'all',
+  limit: number = 5
+): Promise<SearchResponse> {
+  try {
+    // Use 'all' type for Khoj search (available types: all, plaintext)
+    const url = `${KHOJ_BASE}/api/search?q=${encodeURIComponent(query)}&t=all&n=${limit}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`Khoj API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Format Khoj response
+    const results: SearchResult[] = Array.isArray(data)
+      ? data.map((r: { entry?: string; content?: string; file?: string; source?: string; score?: number; additional?: { file?: string; source?: string } }) => ({
+          entry: r.entry || r.content || '',
+          file: r.additional?.file || r.file || r.source || 'unknown',
+          score: r.score || 0.5,
+        }))
+      : [];
+
+    return {
+      query,
+      count: results.length,
+      results,
+    };
+  } catch (error) {
+    console.error('[Khoj] Search error:', error);
+    // Fallback to local search
+    return searchLocal(query, limit);
+  }
+}
+
+/**
+ * Trigger vault re-index
  */
 export async function reindex(): Promise<{ success: boolean; message: string }> {
-  // This will be implemented in Layer 7
-  console.log('[Khoj] Would trigger reindex at:', KHOJ_BASE);
+  if (!USE_KHOJ) {
+    return {
+      success: true,
+      message: 'Local search - no reindex needed',
+    };
+  }
 
-  return {
-    success: true,
-    message: 'Reindex triggered (mock)',
-  };
+  try {
+    const response = await fetch(`${KHOJ_BASE}/api/update`);
+    return {
+      success: response.ok,
+      message: response.ok ? 'Reindex triggered' : 'Reindex failed',
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Reindex error: ${error}`,
+    };
+  }
 }
 
 /**
- * Get Khoj health status
- * @returns Health status
+ * Get search health status
  */
 export async function health(): Promise<{ status: string; indexed: number }> {
-  // This will be implemented in Layer 7
-  console.log('[Khoj] Would check health at:', KHOJ_BASE);
+  if (!USE_KHOJ) {
+    // Count local vault files
+    try {
+      const files = await getVaultFiles(VAULT_PATH);
+      return {
+        status: 'local',
+        indexed: files.length,
+      };
+    } catch {
+      return { status: 'local', indexed: 0 };
+    }
+  }
 
-  return {
-    status: 'mock',
-    indexed: 247,
-  };
+  try {
+    const response = await fetch(`${KHOJ_BASE}/api/health`);
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        status: 'khoj',
+        indexed: data.indexed || 0,
+      };
+    }
+    return { status: 'khoj-error', indexed: 0 };
+  } catch {
+    return { status: 'khoj-offline', indexed: 0 };
+  }
 }
 
 /**
  * Build context string from search results
- * @param results - Search results from Khoj
- * @returns Formatted context string for Claude
  */
 export function buildContext(results: SearchResult[]): string {
   if (results.length === 0) {
@@ -94,4 +247,4 @@ export function buildContext(results: SearchResult[]): string {
     .join('\n\n---\n\n');
 }
 
-export { KHOJ_BASE };
+export { KHOJ_BASE, USE_KHOJ };

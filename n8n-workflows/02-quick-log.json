@@ -17,7 +17,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const today = $now.toFormat('yyyy-MM-dd');\nconst time = $now.toFormat('HH:mm');\nconst text = $input.first().json.body.text || $input.first().json.body.message || '';\n\nreturn {\n  json: {\n    today,\n    time,\n    text,\n    filePath: `/vault/01-Daily/${today}.md`,\n    logEntry: `\\n- ${time} — ${text}`\n  }\n};"
+        "jsCode": "const today = new Date().toISOString().split('T')[0];\nconst now = new Date();\nconst time = now.toTimeString().split(' ')[0].substring(0,5);\nconst body = $input.first().json.body || $input.first().json;\nconst text = body.text || body.message || body.content || '';\n\nreturn {\n  json: {\n    today,\n    time,\n    text,\n    logEntry: `- ${time} — ${text}`\n  }\n};"
       },
       "id": "prepare-log",
       "name": "Prepare Log Entry",
@@ -27,50 +27,31 @@
     },
     {
       "parameters": {
-        "operation": "read",
-        "filePath": "={{ $json.filePath }}",
-        "options": {}
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/vault/write",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ path: 'dummy', content: $json.text, mode: 'log' }) }}",
+        "options": {"timeout": 10000}
       },
-      "id": "read-daily-note",
-      "name": "Read Daily Note",
-      "type": "n8n-nodes-base.readWriteFile",
-      "typeVersion": 1,
-      "position": [750, 300]
-    },
-    {
-      "parameters": {
-        "jsCode": "const currentContent = $input.first().json.data || '';\nconst logEntry = $('Prepare Log Entry').first().json.logEntry;\nconst filePath = $('Prepare Log Entry').first().json.filePath;\n\nlet newContent = currentContent;\nconst logSectionRegex = /(## Log\\n)/;\n\nif (logSectionRegex.test(currentContent)) {\n  newContent = currentContent.replace(logSectionRegex, `$1${logEntry}\\n`);\n} else {\n  newContent = currentContent + `\\n## Log${logEntry}\\n`;\n}\n\nreturn {\n  json: {\n    content: newContent,\n    filePath: filePath,\n    logEntry: logEntry\n  }\n};"
-      },
-      "id": "append-log",
-      "name": "Append Log Entry",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1000, 300]
-    },
-    {
-      "parameters": {
-        "operation": "write",
-        "filePath": "={{ $json.filePath }}",
-        "fileContent": "={{ $json.content }}",
-        "options": {}
-      },
-      "id": "write-daily-note",
-      "name": "Write Daily Note",
-      "type": "n8n-nodes-base.readWriteFile",
-      "typeVersion": 1,
-      "position": [1250, 300]
+      "id": "call-dashboard-api",
+      "name": "Call Dashboard API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [750, 300],
+      "continueOnFail": true
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Log entry added\",\n  \"timestamp\": \"{{ $now.toISO() }}\"\n}",
+        "responseBody": "={{ JSON.stringify({ success: true, text: $('Prepare Log Entry').first().json.text }) }}",
         "options": {}
       },
       "id": "respond-webhook",
       "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1500, 300]
+      "position": [1000, 300]
     }
   ],
   "connections": {
@@ -78,21 +59,15 @@
       "main": [[{"node": "Prepare Log Entry", "type": "main", "index": 0}]]
     },
     "Prepare Log Entry": {
-      "main": [[{"node": "Read Daily Note", "type": "main", "index": 0}]]
+      "main": [[{"node": "Call Dashboard API", "type": "main", "index": 0}]]
     },
-    "Read Daily Note": {
-      "main": [[{"node": "Append Log Entry", "type": "main", "index": 0}]]
-    },
-    "Append Log Entry": {
-      "main": [[{"node": "Write Daily Note", "type": "main", "index": 0}]]
-    },
-    "Write Daily Note": {
+    "Call Dashboard API": {
       "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {"executionOrder": "v1", "saveManualExecutions": true},
-  "versionId": "1",
+  "versionId": "5",
   "meta": {"instanceId": "void-automation"},
-  "tags": [{"name": "void-core"}]
+  "tags": []
 }

@@ -1,25 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import { Task } from "@/lib/types";
-import { TAG_COLORS, PRIORITY_COLORS } from "@/lib/mock-data";
-import { Pill } from "@/components/ui";
 
 interface TaskManagerProps {
   tasks: Task[];
   onToggle: (id: string) => void;
 }
 
-const FILTERS = ["All", "Office", "Project", "Learning", "Personal"];
-
 export default function TaskManager({ tasks, onToggle }: TaskManagerProps) {
-  const [activeFilter, setActiveFilter] = useState("All");
-
-  const filteredTasks =
-    activeFilter === "All"
-      ? tasks
-      : tasks.filter((task) => task.tag === activeFilter);
-
   const pendingCount = tasks.filter((t) => !t.done).length;
   const completedCount = tasks.filter((t) => t.done).length;
 
@@ -48,41 +36,12 @@ export default function TaskManager({ tasks, onToggle }: TaskManagerProps) {
               {pendingCount} pending · {completedCount} done
             </div>
           </div>
-          <button
-            style={{
-              padding: "6px 12px",
-              borderRadius: 6,
-              border: "1px solid #1a1b20",
-              background: "transparent",
-              color: "#71717a",
-              fontSize: 11,
-              cursor: "pointer",
-            }}
-          >
-            + Add task
-          </button>
-        </div>
-
-        {/* Filter Pills */}
-        <div className="flex gap-1.5 flex-wrap" style={{ marginTop: 12 }}>
-          {FILTERS.map((filter) => (
-            <Pill
-              key={filter}
-              active={activeFilter === filter}
-              onClick={() => setActiveFilter(filter)}
-              color={
-                filter !== "All" ? TAG_COLORS[filter]?.color : undefined
-              }
-            >
-              {filter}
-            </Pill>
-          ))}
         </div>
       </div>
 
       {/* Task List */}
       <div style={{ padding: "8px 0" }}>
-        {filteredTasks.length === 0 ? (
+        {tasks.length === 0 ? (
           <div
             style={{
               padding: "24px 16px",
@@ -91,10 +50,10 @@ export default function TaskManager({ tasks, onToggle }: TaskManagerProps) {
               fontSize: 12,
             }}
           >
-            No tasks in this category
+            No tasks yet. Generate a plan to add tasks.
           </div>
         ) : (
-          filteredTasks.map((task) => (
+          tasks.map((task) => (
             <div
               key={task.id}
               className="flex items-start gap-3"
@@ -135,34 +94,12 @@ export default function TaskManager({ tasks, onToggle }: TaskManagerProps) {
                     lineHeight: 1.4,
                   }}
                 >
+                  {task.time && (
+                    <span style={{ color: "#52525b", marginRight: 8 }}>
+                      {task.time}
+                    </span>
+                  )}
                   {task.text}
-                </div>
-                <div
-                  className="flex items-center gap-2"
-                  style={{ marginTop: 4 }}
-                >
-                  {/* Tag */}
-                  <span
-                    style={{
-                      fontSize: 10,
-                      padding: "2px 6px",
-                      borderRadius: 4,
-                      background: TAG_COLORS[task.tag]?.bg || "#1a1b20",
-                      color: TAG_COLORS[task.tag]?.color || "#71717a",
-                    }}
-                  >
-                    {task.tag}
-                  </span>
-                  {/* Priority */}
-                  <span
-                    style={{
-                      fontSize: 10,
-                      color: PRIORITY_COLORS[task.priority],
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {task.priority}
-                  </span>
                 </div>
               </div>
             </div>

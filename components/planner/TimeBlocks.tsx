@@ -1,18 +1,39 @@
 "use client";
 
-import { SCHEDULE_COLORS } from "@/lib/mock-data";
+import { ScheduleItem } from "@/lib/types";
 
-interface TimeBlock {
-  time: string;
-  block: string;
-  type: "work" | "project" | "meeting" | "learn" | "break" | "bot";
-}
+const SCHEDULE_COLORS: Record<string, string> = {
+  focus: "#22c55e",
+  meeting: "#ef4444",
+  break: "#6b7280",
+  admin: "#3b82f6",
+};
 
 interface TimeBlocksProps {
-  schedule: TimeBlock[];
+  schedule: ScheduleItem[];
 }
 
 export default function TimeBlocks({ schedule }: TimeBlocksProps) {
+  if (schedule.length === 0) {
+    return (
+      <div
+        className="rounded-lg border"
+        style={{
+          background: "#111218",
+          borderColor: "#1a1b20",
+          padding: 24,
+        }}
+      >
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#fafafa", marginBottom: 8 }}>
+          Today's Schedule
+        </div>
+        <div style={{ fontSize: 12, color: "#52525b" }}>
+          No schedule yet. Click "Plan My Day" to generate one.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="rounded-lg border"
@@ -45,7 +66,7 @@ export default function TimeBlocks({ schedule }: TimeBlocksProps) {
             className="flex items-center gap-3"
             style={{
               padding: "10px 16px",
-              borderLeft: `3px solid ${SCHEDULE_COLORS[item.type]}`,
+              borderLeft: `3px solid ${SCHEDULE_COLORS[item.type] || "#6b7280"}`,
               marginLeft: 16,
               background:
                 item.type === "meeting"
@@ -71,23 +92,8 @@ export default function TimeBlocks({ schedule }: TimeBlocksProps) {
                 fontWeight: item.type === "meeting" ? 500 : 400,
               }}
             >
-              {item.block}
+              {item.title}
             </div>
-            {item.type === "bot" && (
-              <div
-                className="font-mono"
-                style={{
-                  fontSize: 9,
-                  padding: "2px 6px",
-                  borderRadius: 4,
-                  background: "rgba(245, 158, 11, 0.1)",
-                  color: "#f59e0b",
-                  marginLeft: "auto",
-                }}
-              >
-                BOT
-              </div>
-            )}
           </div>
         ))}
       </div>

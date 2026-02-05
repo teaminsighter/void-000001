@@ -3,24 +3,26 @@
   "nodes": [
     {
       "parameters": {
-        "rule": {
-          "interval": [{"field": "cronExpression", "expression": "*/15 * * * *"}]
-        }
+        "httpMethod": "GET",
+        "path": "health-check",
+        "responseMode": "responseNode",
+        "options": {}
       },
-      "id": "cron-trigger",
-      "name": "Every 15 Minutes",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
-      "position": [250, 300]
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "health-webhook"
     },
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.KHOJ_BASE_URL || 'http://khoj:42110' }}/api/health",
+        "url": "http://host.docker.internal:3000/api/health",
         "options": {"timeout": 10000}
       },
-      "id": "check-khoj",
-      "name": "Check Khoj",
+      "id": "check-dashboard",
+      "name": "Check Dashboard",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [500, 200],
@@ -29,86 +31,48 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.N8N_WEBHOOK_BASE || 'http://localhost:5678' }}/healthz",
+        "url": "http://host.docker.internal:42110/api/health",
         "options": {"timeout": 10000}
       },
-      "id": "check-n8n",
-      "name": "Check n8n",
+      "id": "check-khoj",
+      "name": "Check Khoj",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [500, 350],
+      "position": [500, 400],
       "continueOnFail": true
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.DASHBOARD_URL || 'http://localhost:3000' }}/api/health",
-        "options": {"timeout": 10000}
+        "jsCode": "let dashboardOk = false;\nlet khojOk = false;\n\ntry {\n  const dashboard = $('Check Dashboard').first().json;\n  dashboardOk = !!(dashboard && (dashboard.status === 'ok' || dashboard.version));\n} catch(e) { dashboardOk = false; }\n\ntry {\n  const khoj = $('Check Khoj').first().json;\n  khojOk = !!(khoj && (khoj.email || khoj.status === 'ok'));\n} catch(e) { khojOk = false; }\n\nconst status = {\n  timestamp: new Date().toISOString(),\n  services: {\n    dashboard: dashboardOk,\n    khoj: khojOk,\n    n8n: true\n  }\n};\n\nstatus.healthy = status.services.dashboard && status.services.khoj && status.services.n8n;\n\nreturn {json: status};"
       },
-      "id": "check-dashboard",
-      "name": "Check Dashboard",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [500, 500],
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "jsCode": "const khoj = $('Check Khoj').first();\nconst n8n = $('Check n8n').first();\nconst dashboard = $('Check Dashboard').first();\n\nconst services = [\n  {name: 'Khoj', status: khoj.json?.status === 'ok' || khoj.json?.healthy ? 'ok' : 'down', error: khoj.error},\n  {name: 'n8n', status: n8n.json?.status === 'ok' ? 'ok' : 'down', error: n8n.error},\n  {name: 'Dashboard', status: dashboard.json?.status === 'ok' ? 'ok' : 'down', error: dashboard.error}\n];\n\nconst downServices = services.filter(s => s.status === 'down');\nconst allHealthy = downServices.length === 0;\n\nreturn {\n  json: {\n    allHealthy,\n    services,\n    downServices,\n    timestamp: $now.toISO()\n  }\n};"
-      },
-      "id": "evaluate-health",
-      "name": "Evaluate Health",
+      "id": "aggregate-status",
+      "name": "Aggregate Status",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [750, 350]
+      "position": [750, 300]
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
-          "conditions": [
-            {
-              "id": "health-check",
-              "leftValue": "={{ $json.allHealthy }}",
-              "rightValue": true,
-              "operator": {"type": "boolean", "operation": "equals"}
-            }
-          ],
-          "combinator": "and"
-        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
         "options": {}
       },
-      "id": "check-healthy",
-      "name": "All Healthy?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [1000, 350]
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
-        "text": "=🚨 **Service Alert**\\n\\n{{ $json.downServices.map(s => '❌ ' + s.name + ' is down').join('\\n') }}\\n\\nChecked at {{ $now.toFormat('HH:mm') }}",
-        "additionalFields": {"parse_mode": "Markdown"}
-      },
-      "id": "alert-down",
-      "name": "Send Alert",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [1250, 450],
-      "credentials": {"telegramApi": {"id": "telegram-bot", "name": "Telegram Bot"}}
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1000, 300]
     }
   ],
   "connections": {
-    "Every 15 Minutes": {"main": [[{"node": "Check Khoj", "type": "main", "index": 0}], [{"node": "Check n8n", "type": "main", "index": 0}], [{"node": "Check Dashboard", "type": "main", "index": 0}]]},
-    "Check Khoj": {"main": [[{"node": "Evaluate Health", "type": "main", "index": 0}]]},
-    "Check n8n": {"main": [[{"node": "Evaluate Health", "type": "main", "index": 0}]]},
-    "Check Dashboard": {"main": [[{"node": "Evaluate Health", "type": "main", "index": 0}]]},
-    "Evaluate Health": {"main": [[{"node": "All Healthy?", "type": "main", "index": 0}]]},
-    "All Healthy?": {"main": [[], [{"node": "Send Alert", "type": "main", "index": 0}]]}
+    "Webhook Trigger": {"main": [[{"node": "Check Dashboard", "type": "main", "index": 0}, {"node": "Check Khoj", "type": "main", "index": 0}]]},
+    "Check Dashboard": {"main": [[{"node": "Aggregate Status", "type": "main", "index": 0}]]},
+    "Check Khoj": {"main": [[{"node": "Aggregate Status", "type": "main", "index": 0}]]},
+    "Aggregate Status": {"main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]}
   },
-  "active": false,
+  "active": true,
   "settings": {"executionOrder": "v1", "saveManualExecutions": true},
-  "versionId": "1",
+  "versionId": "2",
   "meta": {"instanceId": "void-automation"},
-  "tags": [{"name": "void-core"}]
+  "tags": []
 }

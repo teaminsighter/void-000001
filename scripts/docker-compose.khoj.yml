@@ -1,0 +1,51 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# VOID — Khoj Local Development Stack
+# ══════════════════════════════════════════════════════════════════════════════
+# Usage: docker compose -f scripts/docker-compose.khoj.yml up -d
+
+services:
+  khoj-db:
+    image: pgvector/pgvector:pg15
+    container_name: void-khoj-db
+    environment:
+      POSTGRES_DB: khoj
+      POSTGRES_USER: khoj
+      POSTGRES_PASSWORD: khoj_dev_password
+    volumes:
+      - khoj-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U khoj"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  khoj:
+    image: ghcr.io/khoj-ai/khoj:latest
+    container_name: void-khoj
+    depends_on:
+      khoj-db:
+        condition: service_healthy
+    ports:
+      - "42110:42110"
+    command: --host 0.0.0.0 --port 42110 --anonymous-mode
+    environment:
+      POSTGRES_DB: khoj
+      POSTGRES_USER: khoj
+      POSTGRES_PASSWORD: khoj_dev_password
+      POSTGRES_HOST: khoj-db
+      POSTGRES_PORT: 5432
+      KHOJ_ADMIN_EMAIL: admin@void.local
+      KHOJ_ADMIN_PASSWORD: void_admin_123
+      KHOJ_DEBUG: "false"
+      KHOJ_HOST: "0.0.0.0"
+      KHOJ_NO_HTTPS: "true"
+      ANONYMOUS_MODE: "true"
+    volumes:
+      - ../vault-template:/data/vault:ro
+      - khoj-data:/root/.khoj
+    restart: unless-stopped
+
+volumes:
+  khoj-postgres:
+  khoj-data:

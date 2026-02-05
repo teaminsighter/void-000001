@@ -34,26 +34,36 @@ export default function ChatPanel({ initialMessages = [] }: ChatPanelProps) {
     setInput("");
     setIsLoading(true);
 
-    // Simulate AI response (will be replaced with real API in Layer 4)
-    setTimeout(() => {
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: userMessage.content,
+          history: messages.map((m) => ({ role: m.role, content: m.content })),
+        }),
+      });
+
+      const data = await response.json();
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: `Processing: "${userMessage.content.slice(0, 50)}${userMessage.content.length > 50 ? "..." : ""}"
-
-I've analyzed your request against your vault context and current priorities. Here's what I'll do:
-
-1. Search vault for related context via Khoj
-2. Execute the appropriate n8n workflow
-3. Save results to your vault
-4. Confirm completion
-
-✓ Action queued. You'll see updates in real-time.`,
+        content: data.reply || data.error || "Sorry, something went wrong.",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: `Error: ${error instanceof Error ? error.message : "Failed to connect"}`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1200);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

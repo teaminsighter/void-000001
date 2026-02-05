@@ -23,11 +23,21 @@ export type TaskTag = 'Office' | 'Project' | 'Learning' | 'Personal';
 export interface Task {
   id: string;
   text: string;
-  tag: TaskTag;
-  priority: TaskPriority;
+  tag?: TaskTag;
+  priority?: TaskPriority;
   done: boolean;
-  createdAt: Date;
+  time?: string;
+  createdAt?: Date;
   dueDate?: Date;
+}
+
+// Schedule types
+export type ScheduleType = 'focus' | 'meeting' | 'break' | 'admin';
+
+export interface ScheduleItem {
+  time: string;
+  title: string;
+  type: ScheduleType;
 }
 
 // Email types
@@ -121,6 +131,7 @@ export interface PageConfig {
 export const PAGES: PageConfig[] = [
   { id: 'home', path: '/', icon: '⌂', label: 'Home' },
   { id: 'agent', path: '/agent', icon: '◉', label: 'Agent' },
+  { id: 'practice', path: '/practice', icon: '🎤', label: 'Practice' },
   { id: 'planner', path: '/planner', icon: '▦', label: 'Planner' },
   { id: 'vault', path: '/vault', icon: '◈', label: 'Vault' },
   { id: 'mail', path: '/mail', icon: '✉', label: 'Mail' },

@@ -6,8 +6,9 @@ type: agent-memory
 # User Preferences
 
 ## Identity
-- Name: [Your name]
-- Location: [Your city]
+- Name: Imran 
+- Present Location: jalkuri, narayngonj
+- permanent Location : gourichanna , barguna , barisal 
 - Timezone: Asia/Dhaka
 
 ## Work Style
@@ -22,9 +23,9 @@ type: agent-memory
 - Weekly review: Sunday 10:00 PM
 
 ## Current Focus
-- [Add your current priorities here]
-- [What you're working on this week]
-- [Key goals for this month]
+- [i am working on train myself to build something that can be useful for people ]
+- [ i want to learn ai automation with n8n  and ai agent with rag , langchain and etc what it need]
+- [key goal for this month is make a portfolio for ai automation with building some project to use on that portfolio .upwork ,fivrr gig]
 
 ## Preferences
 - Always confirm before making changes
@@ -33,5 +34,5 @@ type: agent-memory
 - Remind about breaks during long work sessions
 
 ## Do Not
-- [Things the agent should avoid]
-- [Topics to skip]
+- [done something without my command or asking ]
+

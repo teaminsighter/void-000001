@@ -18,16 +18,8 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.KHOJ_BASE_URL || 'http://khoj:42110' }}/api/search",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {"name": "q", "value": "={{ $json.body.query }}"},
-            {"name": "t", "value": "={{ $json.body.type || 'markdown' }}"},
-            {"name": "n", "value": "={{ $json.body.limit || 5 }}"}
-          ]
-        },
-        "options": {}
+        "url": "=http://host.docker.internal:42110/api/search?q={{ encodeURIComponent($json.body?.query || $json.query || '') }}&t=all&n={{ $json.body?.limit || $json.limit || 5 }}",
+        "options": {"timeout": 30000}
       },
       "id": "khoj-search",
       "name": "Khoj Search",
@@ -37,7 +29,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const results = $input.first().json;\nconst query = $('Webhook Trigger').first().json.body.query;\n\nconst formattedResults = Array.isArray(results) ? results.map((r, i) => ({\n  index: i + 1,\n  entry: r.entry || r.content || '',\n  file: r.file || r.source || 'unknown',\n  score: r.score || r.relevance || 0\n})) : [];\n\nreturn {\n  json: {\n    query: query,\n    count: formattedResults.length,\n    results: formattedResults\n  }\n};"
+        "jsCode": "// n8n returns each array element as separate item\nconst allItems = $input.all();\nconst webhook = $('Webhook Trigger').first().json;\nconst query = webhook.body?.query || webhook.query || '';\n\nconst formattedResults = allItems.map((item, i) => {\n  const r = item.json;\n  return {\n    index: i + 1,\n    entry: (r.entry || r.content || '').substring(0, 300),\n    file: r.additional?.file || r.file || 'unknown',\n    score: r.score || 0\n  };\n});\n\nreturn {\n  json: {\n    query: query,\n    count: formattedResults.length,\n    results: formattedResults\n  }\n};"
       },
       "id": "format-results",
       "name": "Format Results",
@@ -59,19 +51,13 @@
     }
   ],
   "connections": {
-    "Webhook Trigger": {
-      "main": [[{"node": "Khoj Search", "type": "main", "index": 0}]]
-    },
-    "Khoj Search": {
-      "main": [[{"node": "Format Results", "type": "main", "index": 0}]]
-    },
-    "Format Results": {
-      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
-    }
+    "Webhook Trigger": {"main": [[{"node": "Khoj Search", "type": "main", "index": 0}]]},
+    "Khoj Search": {"main": [[{"node": "Format Results", "type": "main", "index": 0}]]},
+    "Format Results": {"main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]}
   },
-  "active": false,
+  "active": true,
   "settings": {"executionOrder": "v1", "saveManualExecutions": true},
-  "versionId": "1",
+  "versionId": "2",
   "meta": {"instanceId": "void-automation"},
-  "tags": [{"name": "void-core"}]
+  "tags": []
 }

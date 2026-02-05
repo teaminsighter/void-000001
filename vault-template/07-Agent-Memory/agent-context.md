@@ -1,5 +1,5 @@
 ---
-updated: 2026-02-03
+updated: 2026-02-05
 type: agent-memory
 ---
 
@@ -9,6 +9,7 @@ This file contains context that helps the AI agent understand you better.
 The agent reads this file to personalize responses and actions.
 
 ## Important Decisions
+- Testing memory system
 Record important decisions here so the agent remembers them:
 - [Decision 1]: [Reason]
 - [Decision 2]: [Reason]

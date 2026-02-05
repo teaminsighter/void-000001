@@ -1,27 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   StatCard,
   TaskList,
-  EmailPreview,
   VaultRecent,
-  PipelineMini,
   QuickActions,
 } from "@/components/dashboard";
-import {
-  TODAY,
-  getGreeting,
-  MOCK_TASKS,
-  MOCK_EMAILS,
-  MOCK_VAULT_FILES,
-  MOCK_DEALS,
-} from "@/lib/mock-data";
-import { Task } from "@/lib/types";
+import { TODAY, getGreeting } from "@/lib/mock-data";
+import { Task, VaultFile } from "@/lib/types";
 
 export default function HomePage() {
-  const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [vaultFiles, setVaultFiles] = useState<VaultFile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      // Load tasks from planner
+      const plannerRes = await fetch("/api/planner");
+      const plannerData = await plannerRes.json();
+      setTasks(plannerData.tasks || []);
+
+      // Load recent vault files
+      const vaultRes = await fetch("/api/vault/list");
+      const vaultData = await vaultRes.json();
+      setVaultFiles(vaultData.files || []);
+    } catch (error) {
+      console.error("Failed to load dashboard data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const toggleTask = (id: string) => {
     setTasks((prev) =>
@@ -30,8 +45,7 @@ export default function HomePage() {
   };
 
   const completedTasks = tasks.filter((t) => t.done).length;
-  const unreadEmails = MOCK_EMAILS.filter((e) => !e.read).length;
-  const urgentEmails = MOCK_EMAILS.filter((e) => e.urgent).length;
+  const highPriorityTasks = tasks.filter((t) => !t.done && t.priority === "high").length;
 
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
@@ -60,7 +74,7 @@ export default function HomePage() {
           {getGreeting()}, boss.
         </div>
         <div style={{ fontSize: 13, color: "#71717a", marginTop: 2 }}>
-          {tasks.filter((t) => !t.done && t.priority === "high").length} urgent tasks · {unreadEmails} unread emails · Weekly review tonight at 10 PM
+          {highPriorityTasks} urgent tasks · {vaultFiles.length} vault notes
         </div>
       </div>
 
@@ -74,25 +88,25 @@ export default function HomePage() {
         <StatCard
           label="Tasks Today"
           value={`${completedTasks}/${tasks.length}`}
-          sub={`${tasks.filter((t) => !t.done && t.priority === "high").length} high priority remaining`}
+          sub={highPriorityTasks > 0 ? `${highPriorityTasks} high priority` : "All caught up"}
           accent="#f59e0b"
         />
         <StatCard
-          label="Unread Emails"
-          value={unreadEmails}
-          sub={urgentEmails > 0 ? `${urgentEmails} urgent from Farhan` : "All caught up"}
-          accent="#ef4444"
-        />
-        <StatCard
           label="Vault Notes"
-          value="247"
-          sub="+3 today"
+          value={vaultFiles.length}
+          sub="Semantic search ready"
           accent="#34d399"
         />
         <StatCard
-          label="Week Streak"
-          value="12d"
-          sub="Longest: 18 days"
+          label="Mail"
+          value="—"
+          sub="Not connected"
+          accent="#ef4444"
+        />
+        <StatCard
+          label="Agent"
+          value="Ready"
+          sub="Void-Haki online"
           accent="#a78bfa"
         />
       </div>
@@ -164,7 +178,28 @@ export default function HomePage() {
               Open mail →
             </Link>
           </div>
-          <EmailPreview emails={MOCK_EMAILS} limit={4} />
+          <div style={{ padding: 24, textAlign: "center" }}>
+            <div style={{ fontSize: 24, marginBottom: 8 }}>✉</div>
+            <div style={{ fontSize: 12, color: "#52525b" }}>
+              Email not connected
+            </div>
+            <Link
+              href="/mail"
+              style={{
+                display: "inline-block",
+                marginTop: 12,
+                padding: "6px 12px",
+                borderRadius: 6,
+                background: "#f59e0b",
+                color: "#0c0d10",
+                fontSize: 11,
+                fontWeight: 600,
+                textDecoration: "none",
+              }}
+            >
+              Connect Gmail
+            </Link>
+          </div>
         </div>
 
         {/* Recent Notes */}
@@ -195,10 +230,10 @@ export default function HomePage() {
               Browse vault →
             </Link>
           </div>
-          <VaultRecent files={MOCK_VAULT_FILES} limit={4} />
+          <VaultRecent files={vaultFiles} limit={4} />
         </div>
 
-        {/* Pipeline Mini */}
+        {/* Quick Search */}
         <div
           style={{
             background: "#111218",
@@ -215,13 +250,37 @@ export default function HomePage() {
             }}
           >
             <span style={{ fontSize: 12, fontWeight: 600, color: "#fafafa" }}>
-              Pipeline
+              Void-Haki
             </span>
-            <span style={{ fontSize: 10, color: "#52525b" }}>
-              {MOCK_DEALS.length} deals active
-            </span>
+            <Link
+              href="/research"
+              style={{ fontSize: 10, color: "#52525b" }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#71717a")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#52525b")}
+            >
+              Research →
+            </Link>
           </div>
-          <PipelineMini deals={MOCK_DEALS} />
+          <div style={{ padding: 16 }}>
+            <div style={{ fontSize: 12, color: "#71717a", marginBottom: 12 }}>
+              Semantic search across your vault
+            </div>
+            <Link
+              href="/research"
+              style={{
+                display: "block",
+                padding: "10px 12px",
+                borderRadius: 6,
+                border: "1px solid #27272a",
+                background: "#18181b",
+                color: "#52525b",
+                fontSize: 12,
+                textDecoration: "none",
+              }}
+            >
+              Search your vault...
+            </Link>
+          </div>
         </div>
       </div>
     </div>
