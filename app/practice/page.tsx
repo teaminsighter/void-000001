@@ -2,6 +2,27 @@
 
 import { useState, useRef, useEffect } from "react";
 
+// Web Speech API types (browser-only)
+/* eslint-disable @typescript-eslint/no-explicit-any */
+interface SpeechRecognitionInstance {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: any) => void) | null;
+  onerror: ((event: any) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: new () => SpeechRecognitionInstance;
+    webkitSpeechRecognition: new () => SpeechRecognitionInstance;
+  }
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 interface Message {
   role: "user" | "assistant";
   content: string;
@@ -15,7 +36,7 @@ export default function PracticePage() {
   const [transcript, setTranscript] = useState("");
   const [error, setError] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Scroll to bottom when messages change
