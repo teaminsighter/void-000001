@@ -28,7 +28,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:3000/api/vault/write",
+        "url": "https://void.insighter.digital/api/vault/write",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ path: 'dummy', content: $json.text, mode: 'log' }) }}",

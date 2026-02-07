@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { triggerWorkflow } from '@/lib/n8n';
+import { appendToLog } from '@/lib/vault';
 
 interface LogRequest {
   text: string;
-  date?: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: LogRequest = await request.json();
-    const { text, date } = body;
+    const { text } = body;
 
     if (!text?.trim()) {
       return NextResponse.json(
@@ -18,17 +17,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await triggerWorkflow('log', {
-      text: text.trim(),
-      date: date || new Date().toISOString().split('T')[0],
-      timestamp: Date.now(),
-    });
+    // Write directly to vault daily note
+    await appendToLog(text.trim());
 
     return NextResponse.json({
-      success: result.success,
+      success: true,
       message: 'Log entry added',
-      data: result.data,
-      mock: result.mock,
     });
   } catch (error) {
     console.error('[API/action/log] Error:', error);

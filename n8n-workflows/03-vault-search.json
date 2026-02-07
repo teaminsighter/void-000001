@@ -18,7 +18,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "=http://host.docker.internal:42110/api/search?q={{ encodeURIComponent($json.body?.query || $json.query || '') }}&t=all&n={{ $json.body?.limit || $json.limit || 5 }}",
+        "url": "=https://khoj.insighter.digital/api/search?q={{ encodeURIComponent($json.body?.query || $json.query || '') }}&t=all&n={{ $json.body?.limit || $json.limit || 5 }}",
         "options": {"timeout": 30000}
       },
       "id": "khoj-search",

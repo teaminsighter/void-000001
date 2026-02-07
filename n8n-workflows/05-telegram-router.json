@@ -17,7 +17,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst message = body.message || {};\nconst text = message.text || '';\nconst chatId = message.chat?.id || '';\n\n// Route based on command\nif (text.startsWith('/log ')) {\n  const logText = text.replace('/log ', '').trim();\n  return {json: {chatId, command: 'log', content: logText}};\n}\n\nif (text.startsWith('/memory ')) {\n  const memoryText = text.replace('/memory ', '').trim();\n  // Parse format: \"type: content\" e.g., \"goal: Launch by March\"\n  const colonIndex = memoryText.indexOf(':');\n  if (colonIndex > 0) {\n    const type = memoryText.substring(0, colonIndex).trim().toLowerCase();\n    const content = memoryText.substring(colonIndex + 1).trim();\n    return {json: {chatId, command: 'memory', type, content}};\n  }\n  // Default to context if no type specified\n  return {json: {chatId, command: 'memory', type: 'context', content: memoryText}};\n}\n\nif (text.startsWith('/plan')) {\n  const planInput = text.replace('/plan', '').trim();\n  return {json: {chatId, command: 'plan', content: planInput}};\n}\n\n// Unknown command\nreturn {json: {chatId, command: 'unknown', content: text}};"
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst message = body.message || {};\nconst text = message.text || '';\nconst chatId = message.chat?.id || '';\n\nif (text.startsWith('/log ')) {\n  const logText = text.replace('/log ', '').trim();\n  return {json: {chatId, command: 'log', content: logText}};\n}\n\nif (text.startsWith('/memory ')) {\n  const memoryText = text.replace('/memory ', '').trim();\n  const colonIndex = memoryText.indexOf(':');\n  if (colonIndex > 0) {\n    const type = memoryText.substring(0, colonIndex).trim().toLowerCase();\n    const content = memoryText.substring(colonIndex + 1).trim();\n    return {json: {chatId, command: 'memory', type, content}};\n  }\n  return {json: {chatId, command: 'memory', type: 'context', content: memoryText}};\n}\n\nif (text.startsWith('/plan')) {\n  const planInput = text.replace('/plan', '').trim();\n  return {json: {chatId, command: 'plan', content: planInput}};\n}\n\nreturn {json: {chatId, command: 'unknown', content: text}};"
       },
       "id": "parse-command",
       "name": "Parse Command",
@@ -27,25 +27,70 @@
     },
     {
       "parameters": {
-        "rules": {
-          "rules": [
-            {"outputKey": "log", "conditions": {"conditions": [{"leftValue": "={{ $json.command }}", "rightValue": "log", "operator": {"type": "string", "operation": "equals"}}]}},
-            {"outputKey": "memory", "conditions": {"conditions": [{"leftValue": "={{ $json.command }}", "rightValue": "memory", "operator": {"type": "string", "operation": "equals"}}]}},
-            {"outputKey": "unknown", "conditions": {"conditions": [{"leftValue": "={{ $json.command }}", "rightValue": "unknown", "operator": {"type": "string", "operation": "equals"}}]}}
-          ]
-        },
-        "options": {"fallbackOutput": "extra"}
+        "jsCode": "const cmd = $input.first().json.command;\nconst data = $input.first().json;\n\nif (cmd === 'log') {\n  return [{json: {...data, _route: 'log'}}, {json: {}}, {json: {}}];\n} else if (cmd === 'memory') {\n  return [{json: {}}, {json: {...data, _route: 'memory'}}, {json: {}}];\n} else {\n  return [{json: {}}, {json: {}}, {json: {...data, _route: 'unknown'}}];\n}"
       },
       "id": "route-command",
       "name": "Route Command",
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3,
-      "position": [750, 300]
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 300],
+      "outputs": ["main", "main", "main"]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json._route === 'log' }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-log",
+      "name": "If Log",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [950, 150]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json._route === 'memory' }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-memory",
+      "name": "If Memory",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [950, 350]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json._route === 'unknown' }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-unknown",
+      "name": "If Unknown",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [950, 550]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:3000/api/vault/write",
+        "url": "https://void.insighter.digital/api/vault/write",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ path: 'dummy', content: $json.content, mode: 'log' }) }}",
@@ -55,13 +100,13 @@
       "name": "Call Log API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1000, 150],
-      "onError": "continueRegularOutput"
+      "position": [1200, 100],
+      "continueOnFail": true
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:3000/api/action/memory",
+        "url": "https://void.insighter.digital/api/action/memory",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ type: $json.type, content: $json.content }) }}",
@@ -71,8 +116,8 @@
       "name": "Call Memory API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1000, 300],
-      "onError": "continueRegularOutput"
+      "position": [1200, 300],
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -80,14 +125,14 @@
         "url": "https://api.telegram.org/bot8511416050:AAF7VRhFxvNT6pATHBhlsgpHpy0J56GqBYs/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ chat_id: $('Parse Command').first().json.chatId, text: '✓ Logged: ' + $('Parse Command').first().json.content }) }}",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $('Parse Command').first().json.chatId, text: 'Logged: ' + $('Parse Command').first().json.content }) }}",
         "options": {}
       },
       "id": "reply-log",
       "name": "Reply Log",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1250, 150]
+      "position": [1450, 100]
     },
     {
       "parameters": {
@@ -95,14 +140,14 @@
         "url": "https://api.telegram.org/bot8511416050:AAF7VRhFxvNT6pATHBhlsgpHpy0J56GqBYs/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ chat_id: $('Parse Command').first().json.chatId, text: '✓ Saved to ' + $('Parse Command').first().json.type + ': ' + $('Parse Command').first().json.content }) }}",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $('Parse Command').first().json.chatId, text: 'Saved to ' + $('Parse Command').first().json.type + ': ' + $('Parse Command').first().json.content }) }}",
         "options": {}
       },
       "id": "reply-memory",
       "name": "Reply Memory",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1250, 300]
+      "position": [1450, 300]
     },
     {
       "parameters": {
@@ -110,26 +155,28 @@
         "url": "https://api.telegram.org/bot8511416050:AAF7VRhFxvNT6pATHBhlsgpHpy0J56GqBYs/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ chat_id: $('Parse Command').first().json.chatId, text: 'Commands:\\n/log <text> - Quick log\\n/memory <type>: <text> - Save memory\\n  Types: preference, goal, context\\n/plan <input> - Plan day' }) }}",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $('Parse Command').first().json.chatId, text: 'Commands:\\n/log <text> - Quick log\\n/memory <type>: <text> - Save memory\\n/plan <input> - Plan day' }) }}",
         "options": {}
       },
       "id": "reply-help",
       "name": "Reply Help",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1250, 450]
+      "position": [1450, 500]
     }
   ],
   "connections": {
     "Webhook": {"main": [[{"node": "Parse Command", "type": "main", "index": 0}]]},
-    "Parse Command": {"main": [[{"node": "Route Command", "type": "main", "index": 0}]]},
-    "Route Command": {"log": [[{"node": "Call Log API", "type": "main", "index": 0}]], "memory": [[{"node": "Call Memory API", "type": "main", "index": 0}]], "unknown": [[{"node": "Reply Help", "type": "main", "index": 0}]]},
+    "Parse Command": {"main": [[{"node": "If Log", "type": "main", "index": 0}, {"node": "If Memory", "type": "main", "index": 0}, {"node": "If Unknown", "type": "main", "index": 0}]]},
+    "If Log": {"main": [[{"node": "Call Log API", "type": "main", "index": 0}]]},
+    "If Memory": {"main": [[{"node": "Call Memory API", "type": "main", "index": 0}]]},
+    "If Unknown": {"main": [[{"node": "Reply Help", "type": "main", "index": 0}]]},
     "Call Log API": {"main": [[{"node": "Reply Log", "type": "main", "index": 0}]]},
     "Call Memory API": {"main": [[{"node": "Reply Memory", "type": "main", "index": 0}]]}
   },
   "active": true,
   "settings": {"executionOrder": "v1", "saveManualExecutions": true},
-  "versionId": "8",
+  "versionId": "9",
   "meta": {"instanceId": "void-automation"},
   "tags": []
 }
