@@ -8,8 +8,17 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 const KHOJ_BASE = process.env.KHOJ_BASE_URL || 'http://localhost:42110';
+const KHOJ_API_KEY = process.env.KHOJ_API_KEY || '';
 const VAULT_PATH = process.env.VAULT_PATH || './vault-template';
 const USE_KHOJ = process.env.USE_KHOJ === 'true'; // Set to 'true' to enable Khoj
+
+function khojHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (KHOJ_API_KEY) {
+    headers['Authorization'] = `Bearer ${KHOJ_API_KEY}`;
+  }
+  return headers;
+}
 
 interface SearchResult {
   entry: string;
@@ -148,7 +157,7 @@ async function searchWithKhoj(
   try {
     // Use 'all' type for Khoj search (available types: all, plaintext)
     const url = `${KHOJ_BASE}/api/search?q=${encodeURIComponent(query)}&t=all&n=${limit}`;
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: khojHeaders() });
 
     if (!response.ok) {
       throw new Error(`Khoj API error: ${response.status}`);
@@ -189,7 +198,7 @@ export async function reindex(): Promise<{ success: boolean; message: string }> 
   }
 
   try {
-    const response = await fetch(`${KHOJ_BASE}/api/update`);
+    const response = await fetch(`${KHOJ_BASE}/api/update`, { headers: khojHeaders() });
     return {
       success: response.ok,
       message: response.ok ? 'Reindex triggered' : 'Reindex failed',
@@ -220,7 +229,7 @@ export async function health(): Promise<{ status: string; indexed: number }> {
   }
 
   try {
-    const response = await fetch(`${KHOJ_BASE}/api/health`);
+    const response = await fetch(`${KHOJ_BASE}/api/health`, { headers: khojHeaders() });
     if (response.ok) {
       const data = await response.json();
       return {
@@ -247,4 +256,29 @@ export function buildContext(results: SearchResult[]): string {
     .join('\n\n---\n\n');
 }
 
-export { KHOJ_BASE, USE_KHOJ };
+/**
+ * Sync a file to Khoj for indexing
+ * Called after writing to vault
+ */
+export async function syncFileToKhoj(fileName: string, content: string): Promise<boolean> {
+  if (!USE_KHOJ) return true;
+
+  try {
+    const formData = new FormData();
+    const blob = new Blob([content], { type: 'text/markdown' });
+    formData.append('files', blob, fileName);
+
+    const response = await fetch(`${KHOJ_BASE}/api/content`, {
+      method: 'PATCH',
+      headers: khojHeaders(),
+      body: formData,
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.error('[Khoj] Sync error:', error);
+    return false;
+  }
+}
+
+export { KHOJ_BASE, KHOJ_API_KEY, USE_KHOJ };
