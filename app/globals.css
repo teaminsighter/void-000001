@@ -5,16 +5,20 @@
    Palette: Charcoal / Warm surfaces / Amber accent
    ══════════════════════════════════════ */
 
-:root {
+:root,
+:root[data-theme="dark"] {
   /* Core colors */
   --void-bg: #0c0d10;
   --void-surface: #111218;
   --void-border: #1a1b20;
-  --void-text: #d4d4d8;
-  --void-muted: #71717a;
-  --void-dim: #52525b;
-  --void-faint: #3f3f46;
+  --void-text: #e4e4e7;
+  --void-muted: #a1a1aa;
+  --void-dim: #71717a;
+  --void-faint: #63636e;
   --void-accent: #f59e0b;
+  --void-white: #fafafa;
+  --void-sidebar-bg: #0a0b0e;
+  --void-surface-hover: #1a1b20;
 
   /* Tag colors */
   --tag-office: #60a5fa;
@@ -33,6 +37,30 @@
   --font-mono: var(--font-jetbrains-mono), monospace;
 }
 
+:root[data-theme="light"] {
+  --void-bg: #ffffff;
+  --void-surface: #f5f5f7;
+  --void-border: #d1d5db;
+  --void-text: #1a1a1a;
+  --void-muted: #4b5563;
+  --void-dim: #6b7280;
+  --void-faint: #6b7280;
+  --void-accent: #f59e0b;
+  --void-white: #0c0d10;
+  --void-sidebar-bg: #f1f2f4;
+  --void-surface-hover: #e8e9ec;
+
+  --tag-office: #2563eb;
+  --tag-project: #7c3aed;
+  --tag-learning: #059669;
+  --tag-personal: #d97706;
+
+  --status-urgent: #dc2626;
+  --status-warn: #ca8a04;
+  --status-ok: #16a34a;
+  --status-info: #2563eb;
+}
+
 @theme inline {
   --color-void-bg: var(--void-bg);
   --color-void-surface: var(--void-surface);
@@ -42,6 +70,9 @@
   --color-void-dim: var(--void-dim);
   --color-void-faint: var(--void-faint);
   --color-void-accent: var(--void-accent);
+  --color-void-white: var(--void-white);
+  --color-void-sidebar-bg: var(--void-sidebar-bg);
+  --color-void-surface-hover: var(--void-surface-hover);
 
   --color-tag-office: var(--tag-office);
   --color-tag-project: var(--tag-project);
@@ -163,7 +194,7 @@ body {
 }
 
 .nav-link:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in srgb, var(--void-text) 5%, transparent);
 }
 
 .nav-link-active {
@@ -180,7 +211,7 @@ body {
 }
 
 .search-btn:hover {
-  border-color: #27272a;
+  border-color: var(--void-dim);
 }
 
 .agent-btn {
@@ -192,3 +223,119 @@ body {
 .agent-btn:hover {
   background: rgba(245, 158, 11, 0.12);
 }
+
+/* Voice mode — mic button */
+.void-mic-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--void-surface);
+  color: var(--void-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.void-mic-btn:hover {
+  background: var(--void-surface-hover);
+  color: var(--void-accent);
+}
+.void-mic-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@keyframes voicePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+}
+
+.void-mic-active {
+  animation: voicePulse 1.5s ease-in-out infinite;
+  background: var(--status-urgent) !important;
+  color: #fff !important;
+}
+
+/* Empty state icon animations */
+@keyframes iconPulseIdle {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+@keyframes iconPulseListening {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.12); }
+}
+
+.void-icon-idle {
+  animation: iconPulseIdle 3s ease-in-out infinite;
+}
+
+.void-icon-listening {
+  animation: iconPulseListening 1s ease-in-out infinite;
+}
+
+/* Hover row (replaces inline onMouseEnter/onMouseLeave) */
+.void-hover-row { transition: background 0.15s; }
+.void-hover-row:hover { background: var(--void-surface-hover); }
+
+/* ══════════════════════════════════════
+   Apple-Style Utility Classes
+   ══════════════════════════════════════ */
+
+/* Frosted glass card */
+.void-glass {
+  background: color-mix(in srgb, var(--void-surface) 80%, transparent);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid color-mix(in srgb, var(--void-border) 60%, transparent);
+  border-radius: 12px;
+}
+
+/* Standard card */
+.void-card {
+  background: var(--void-surface);
+  border: 1px solid var(--void-border);
+  border-radius: 12px;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+/* Apple input */
+.void-input {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--void-border);
+  background: var(--void-surface);
+  color: var(--void-white);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.void-input:focus {
+  border-color: var(--void-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--void-accent) 15%, transparent);
+}
+
+/* Primary button */
+.void-btn-primary {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  background: var(--void-accent);
+  color: var(--void-bg);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.void-btn-primary:hover { opacity: 0.9; }
+.void-btn-primary:active { transform: scale(0.98); }
+.void-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Page headings */
+.void-heading { font-size: 22px; font-weight: 700; color: var(--void-white); letter-spacing: -0.02em; }
+.void-subheading { font-size: 13px; color: var(--void-muted); margin-top: 4px; }

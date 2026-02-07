@@ -40,8 +40,11 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('ElevenLabs error:', error);
-      return NextResponse.json({ error: 'Failed to generate speech' }, { status: 500 });
+      console.error('ElevenLabs error (status ' + response.status + '):', error);
+      const msg = response.status === 401
+        ? 'ElevenLabs API key is invalid or expired'
+        : 'Failed to generate speech';
+      return NextResponse.json({ error: msg }, { status: response.status });
     }
 
     // Return audio as binary

@@ -131,7 +131,6 @@ export interface PageConfig {
 export const PAGES: PageConfig[] = [
   { id: 'home', path: '/', icon: '⌂', label: 'Home' },
   { id: 'agent', path: '/agent', icon: '◉', label: 'Agent' },
-  { id: 'practice', path: '/practice', icon: '🎤', label: 'Practice' },
   { id: 'planner', path: '/planner', icon: '▦', label: 'Planner' },
   { id: 'vault', path: '/vault', icon: '◈', label: 'Vault' },
   { id: 'mail', path: '/mail', icon: '✉', label: 'Mail' },
