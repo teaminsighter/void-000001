@@ -15,8 +15,8 @@ export default function TaskManager({ tasks, onToggle }: TaskManagerProps) {
     <div
       className="rounded-lg border"
       style={{
-        background: "#111218",
-        borderColor: "#1a1b20",
+        background: "var(--void-surface)",
+        borderColor: "var(--void-border)",
       }}
     >
       {/* Header */}
@@ -24,15 +24,15 @@ export default function TaskManager({ tasks, onToggle }: TaskManagerProps) {
         className="border-b"
         style={{
           padding: "12px 16px",
-          borderColor: "#1a1b20",
+          borderColor: "var(--void-border)",
         }}
       >
         <div className="flex items-center justify-between">
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#fafafa" }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--void-white)" }}>
               Tasks
             </div>
-            <div style={{ fontSize: 11, color: "#52525b", marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: "var(--void-faint)", marginTop: 2 }}>
               {pendingCount} pending · {completedCount} done
             </div>
           </div>
@@ -46,7 +46,7 @@ export default function TaskManager({ tasks, onToggle }: TaskManagerProps) {
             style={{
               padding: "24px 16px",
               textAlign: "center",
-              color: "#52525b",
+              color: "var(--void-faint)",
               fontSize: 12,
             }}
           >
@@ -80,7 +80,7 @@ export default function TaskManager({ tasks, onToggle }: TaskManagerProps) {
                 }}
               >
                 {task.done && (
-                  <span style={{ color: "#0c0d10", fontSize: 10 }}>✓</span>
+                  <span style={{ color: "var(--void-bg)", fontSize: 10 }}>✓</span>
                 )}
               </button>
 
@@ -95,7 +95,7 @@ export default function TaskManager({ tasks, onToggle }: TaskManagerProps) {
                   }}
                 >
                   {task.time && (
-                    <span style={{ color: "#52525b", marginRight: 8 }}>
+                    <span style={{ color: "var(--void-faint)", marginRight: 8 }}>
                       {task.time}
                     </span>
                   )}

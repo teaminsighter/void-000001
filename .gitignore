@@ -31,6 +31,16 @@ node_modules/
 # Local vault (personal data)
 /vault/
 
+# SQLite database
+/data/
+*.db
+
+# File uploads (temporary)
+/uploads/
+
+# Vault version snapshots
+.versions/
+
 # Docker volumes (on VPS)
 docker/data/
 docker/volumes/

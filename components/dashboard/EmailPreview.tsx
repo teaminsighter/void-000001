@@ -56,7 +56,7 @@ export default function EmailPreview({ emails, limit = 4 }: EmailPreviewProps) {
             <div
               style={{
                 fontSize: 10.5,
-                color: "#52525b",
+                color: "var(--void-faint)",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",

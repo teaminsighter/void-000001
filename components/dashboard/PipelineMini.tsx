@@ -34,8 +34,8 @@ export default function PipelineMini({ deals }: PipelineMiniProps) {
 
           {/* Deal info */}
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11.5, color: "#d4d4d8" }}>{deal.name}</div>
-            <div style={{ fontSize: 9.5, color: "#52525b" }}>
+            <div style={{ fontSize: 11.5, color: "var(--void-text)" }}>{deal.name}</div>
+            <div style={{ fontSize: 9.5, color: "var(--void-faint)" }}>
               {deal.stage} · {deal.probability}
             </div>
           </div>
@@ -43,7 +43,7 @@ export default function PipelineMini({ deals }: PipelineMiniProps) {
           {/* Value */}
           <span
             className="font-mono"
-            style={{ fontSize: 12, fontWeight: 600, color: "#fafafa" }}
+            style={{ fontSize: 12, fontWeight: 600, color: "var(--void-white)" }}
           >
             {deal.value}
           </span>

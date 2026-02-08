@@ -7,19 +7,18 @@ interface PillProps {
   onClick?: () => void;
 }
 
-export default function Pill({ children, active = false, color = "#f59e0b", onClick }: PillProps) {
+export default function Pill({ children, active = false, color = "var(--void-accent)", onClick }: PillProps) {
   return (
     <button
       onClick={onClick}
-      className="transition-colors"
+      className="transition-all duration-150 rounded"
       style={{
         fontSize: 10,
         padding: "3px 8px",
-        borderRadius: 4,
         fontWeight: 500,
         letterSpacing: 0.2,
-        background: active ? `${color}18` : "rgba(255, 255, 255, 0.03)",
-        color: active ? color : "#64748b",
+        background: active ? `color-mix(in srgb, ${color} 12%, transparent)` : "rgba(128, 128, 128, 0.05)",
+        color: active ? color : "var(--void-muted)",
         border: "none",
         cursor: onClick ? "pointer" : "default",
       }}

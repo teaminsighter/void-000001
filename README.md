@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VOID
 
-## Getting Started
+Personal AI Operating System — a single web dashboard where an AI agent plans your day, manages notes, searches your knowledge vault, and runs automated workflows.
 
-First, run the development server:
+## Tech Stack
+
+- **Next.js 16** (App Router) + **React 19** + **Tailwind CSS v4** + **TypeScript 5**
+- **Claude API** (Anthropic SDK 0.72.1) for AI reasoning
+- **Khoj** for semantic vault search
+- **n8n** for workflow automation
+- **PostgreSQL + pgvector** for embeddings
+
+## Live URLs
+
+| Service | URL |
+|---------|-----|
+| Dashboard | [void.insighter.digital](https://void.insighter.digital) |
+| Khoj | [khoj.insighter.digital](https://khoj.insighter.digital) |
+| n8n | [n8n.insighter.digital](https://n8n.insighter.digital) |
+
+## Quick Start (Local Dev)
 
 ```bash
+git clone <repo-url> void
+cd void/void-000001
+npm install
+cp .env.example .env.local
+# Edit .env.local with your API keys
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Architecture
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+Browser → Coolify Proxy (SSL) → Dashboard (Next.js 16)
+                                    ├── Claude API (thinks)
+                                    ├── Vault (direct filesystem read/write)
+                                    ├── Khoj (semantic search)
+                                    └── n8n (complex integrations)
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Core actions (log, memory, save) write directly to the vault. n8n handles complex integrations (email, reminders, CRM).
 
-## Learn More
+## Folder Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+app/          Next.js pages + API routes
+components/   React components (layout, chat, dashboard, ui)
+lib/          Utilities (anthropic, vault, prompts, khoj, n8n)
+hooks/        React hooks (useChat, useTasks, useKeyboard)
+docker/       Docker Compose files for VPS services
+docs/         Documentation (API, Architecture, Setup)
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Deployed on **Coolify** (Hostinger VPS) using **Nixpacks** build. Push to main triggers auto-deploy.
 
-## Deploy on Vercel
+## Environment Variables
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+See [`.env.example`](.env.example) for all required variables. Key ones:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Variable | Purpose |
+|----------|---------|
+| `ANTHROPIC_API_KEY` | Claude API key (required) |
+| `KHOJ_BASE_URL` | Khoj API endpoint |
+| `KHOJ_API_KEY` | Khoj auth token |
+| `N8N_WEBHOOK_BASE` | n8n webhook URL |
+| `VAULT_PATH` | Path to markdown vault |
+| `TELEGRAM_BOT_TOKEN` | Telegram notifications |
+
+## Documentation
+
+- [API Documentation](docs/API.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Setup Guide](docs/SETUP.md)
+- [Build Plan](VOID-LAYER-BUILD-PLAN.md)
+- [Build Guide](VOID-BUILD-GUIDE.md)

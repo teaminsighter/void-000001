@@ -14,8 +14,8 @@
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/void.git
-cd void
+git clone <repo-url> void
+cd void/void-000001
 ```
 
 ### 2. Install dependencies
@@ -48,14 +48,16 @@ npm run dev
 
 Navigate to [http://localhost:3000](http://localhost:3000)
 
-## Production Deployment
+## Production Deployment (Coolify)
 
-See the Layer-by-Layer Build Plan for detailed deployment instructions:
+1. Push code to GitHub
+2. In Coolify: Add Resource → Git Application → connect GitHub repo
+3. Set build pack to **Nixpacks** (auto-detects Next.js)
+4. Set domain: `void.insighter.digital`
+5. Add environment variables (see below)
+6. Deploy
 
-1. **Layer 5**: VPS setup + Docker services
-2. **Layer 6**: n8n workflows
-3. **Layer 7**: Dashboard deployment
-4. **Layer 8**: Polish + sync setup
+Coolify auto-deploys on push to main.
 
 ## Commands
 
@@ -73,9 +75,14 @@ See the Layer-by-Layer Build Plan for detailed deployment instructions:
 | `ANTHROPIC_API_KEY` | Claude API key | Yes |
 | `N8N_WEBHOOK_BASE` | n8n webhook URL | Yes |
 | `KHOJ_BASE_URL` | Khoj API URL | Yes |
+| `KHOJ_API_KEY` | Khoj auth token | Yes |
+| `USE_KHOJ` | Enable Khoj search (`true`/`false`) | Yes |
 | `VAULT_PATH` | Path to vault folder | Yes |
-| `NEXTAUTH_SECRET` | Auth secret | Yes |
-| `NEXTAUTH_URL` | App URL | Yes |
+| `ELEVENLABS_API_KEY` | ElevenLabs TTS key | No |
+| `ELEVENLABS_VOICE_ID` | ElevenLabs voice ID | No |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot token | No |
+| `TELEGRAM_CHAT_ID` | Your Telegram chat ID | No |
+| `TIMEZONE` | Timezone (default: Asia/Dhaka) | No |
 
 ## Troubleshooting
 
@@ -90,6 +97,11 @@ See the Layer-by-Layer Build Plan for detailed deployment instructions:
 ### Build failures
 - Clear `.next` folder: `rm -rf .next`
 - Delete `node_modules` and reinstall
+
+### Khoj search not working
+- Verify `USE_KHOJ=true` in env
+- Check Khoj is running and accessible
+- Verify `KHOJ_API_KEY` is correct
 
 ## Need Help?
 

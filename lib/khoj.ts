@@ -151,12 +151,13 @@ async function getVaultFiles(dir: string): Promise<string[]> {
  */
 async function searchWithKhoj(
   query: string,
-  type: string = 'all',
-  limit: number = 5
+  type: string = 'markdown',
+  limit: number = 8
 ): Promise<SearchResponse> {
   try {
-    // Use 'all' type for Khoj search (available types: all, plaintext)
-    const url = `${KHOJ_BASE}/api/search?q=${encodeURIComponent(query)}&t=all&n=${limit}`;
+    // Use 'markdown' type for vault-specific searches, increased default limit to 8
+    const searchType = type === 'all' ? 'all' : 'markdown';
+    const url = `${KHOJ_BASE}/api/search?q=${encodeURIComponent(query)}&t=${searchType}&n=${limit}`;
     const response = await fetch(url, { headers: khojHeaders() });
 
     if (!response.ok) {
@@ -174,10 +175,22 @@ async function searchWithKhoj(
         }))
       : [];
 
+    // Deduplicate by file path, keep highest score per file
+    const seen = new Map<string, SearchResult>();
+    for (const r of results) {
+      const existing = seen.get(r.file);
+      if (!existing || r.score > existing.score) {
+        seen.set(r.file, r);
+      }
+    }
+
+    // Sort by score descending
+    const deduped = Array.from(seen.values()).sort((a, b) => b.score - a.score);
+
     return {
       query,
-      count: results.length,
-      results,
+      count: deduped.length,
+      results: deduped,
     };
   } catch (error) {
     console.error('[Khoj] Search error:', error);
@@ -278,6 +291,42 @@ export async function syncFileToKhoj(fileName: string, content: string): Promise
   } catch (error) {
     console.error('[Khoj] Sync error:', error);
     return false;
+  }
+}
+
+/**
+ * Chat with Khoj's RAG endpoint for deep vault knowledge queries
+ * Khoj retrieves relevant docs and generates an answer
+ */
+export async function khojChat(query: string): Promise<string> {
+  if (!USE_KHOJ) {
+    // Fallback: do a local search and return raw results
+    const results = await searchLocal(query, 5);
+    if (results.count === 0) return 'No relevant information found in vault.';
+    return results.results
+      .map(r => `From ${r.file}:\n${r.entry.slice(0, 500)}`)
+      .join('\n\n---\n\n');
+  }
+
+  try {
+    const url = `${KHOJ_BASE}/api/chat?q=${encodeURIComponent(query)}&stream=false`;
+    const response = await fetch(url, { headers: khojHeaders() });
+
+    if (!response.ok) {
+      throw new Error(`Khoj chat error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    // Khoj returns { response: "...", context: [...] } or similar
+    return data.response || data.message || JSON.stringify(data);
+  } catch (error) {
+    console.error('[Khoj] Chat error:', error);
+    // Fallback to local search
+    const results = await searchLocal(query, 5);
+    if (results.count === 0) return 'No relevant information found in vault.';
+    return results.results
+      .map(r => `From ${r.file}:\n${r.entry.slice(0, 500)}`)
+      .join('\n\n---\n\n');
   }
 }
 

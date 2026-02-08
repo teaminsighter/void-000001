@@ -7,28 +7,20 @@ interface BadgeProps {
   variant?: BadgeVariant;
 }
 
-const variantStyles: Record<BadgeVariant, { bg: string; color: string }> = {
-  urgent: { bg: "rgba(239, 68, 68, 0.12)", color: "#ef4444" },
-  warn: { bg: "rgba(234, 179, 8, 0.12)", color: "#eab308" },
-  ok: { bg: "rgba(34, 197, 94, 0.12)", color: "#22c55e" },
-  info: { bg: "rgba(59, 130, 246, 0.12)", color: "#3b82f6" },
+const variantClasses: Record<BadgeVariant, string> = {
+  urgent: "bg-status-urgent/12 text-status-urgent",
+  warn: "bg-status-warn/12 text-status-warn",
+  ok: "bg-status-ok/12 text-status-ok",
+  info: "bg-status-info/12 text-status-info",
 };
 
 export default function Badge({ children, variant = "info" }: BadgeProps) {
-  const style = variantStyles[variant];
-
   return (
     <span
-      style={{
-        fontSize: 8.5,
-        padding: "1px 6px",
-        borderRadius: 3,
-        fontWeight: 600,
-        textTransform: "uppercase",
-        letterSpacing: 0.5,
-        background: style.bg,
-        color: style.color,
-      }}
+      className={`
+        inline-block text-[8.5px] px-1.5 py-px rounded font-semibold
+        uppercase tracking-wide ${variantClasses[variant]}
+      `}
     >
       {children}
     </span>

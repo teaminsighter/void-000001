@@ -2,12 +2,33 @@
 // VOID — TypeScript Types
 // ══════════════════════════════════════
 
+// Attachment types
+export interface Attachment {
+  id: string;
+  name: string;
+  type: 'image' | 'pdf';
+  mimeType: string;
+  path: string;
+  url: string;
+  size: number;
+  extractedText?: string;
+}
+
 // Chat types
+export interface ToolAction {
+  tool: string;
+  input: Record<string, unknown>;
+  result: string;
+  success: boolean;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  actions?: ToolAction[];
+  attachments?: Attachment[];
 }
 
 export interface ChatState {
@@ -93,6 +114,24 @@ export interface SavedItem {
   source: string;
   date: string;
   url: string;
+}
+
+// Conversation types
+export interface Conversation {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConversationWithMessages extends Conversation {
+  messages: {
+    id: string;
+    conversation_id: string;
+    role: 'user' | 'assistant';
+    content: string;
+    created_at: string;
+  }[];
 }
 
 // API response types

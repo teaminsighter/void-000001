@@ -7,17 +7,17 @@
 │                              YOUR DEVICES                                    │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│   ┌─────────────┐     ┌─────────────┐     ┌─────────────┐                  │
-│   │   Browser   │     │  Obsidian   │     │  Telegram   │                  │
-│   │ (Dashboard) │     │   (Mac)     │     │  (Mobile)   │                  │
-│   └──────┬──────┘     └──────┬──────┘     └──────┬──────┘                  │
-│          │                   │                   │                          │
-└──────────┼───────────────────┼───────────────────┼──────────────────────────┘
-           │ HTTPS             │ Syncthing         │ Telegram API
-           │                   │ (P2P sync)        │
-           ▼                   ▼                   ▼
+│   ┌─────────────┐                           ┌─────────────┐                 │
+│   │   Browser   │                           │  Telegram   │                 │
+│   │ (Dashboard) │                           │  (Mobile)   │                 │
+│   └──────┬──────┘                           └──────┬──────┘                 │
+│          │                                         │                        │
+└──────────┼─────────────────────────────────────────┼────────────────────────┘
+           │ HTTPS                                   │ Telegram API
+           │                                         │
+           ▼                                         ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              YOUR VPS                                        │
+│                              YOUR VPS (69.62.80.66)                          │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │   ┌─────────────────────────────────────────────────────────────┐          │
@@ -28,7 +28,7 @@
 │               ▼                  ▼                  ▼                       │
 │   ┌───────────────────┐ ┌───────────────┐ ┌───────────────┐                │
 │   │     Dashboard     │ │     n8n       │ │     Khoj      │                │
-│   │   (Next.js)       │ │  (Automation) │ │ (AI Search)   │                │
+│   │   (Next.js 16)    │ │  (Automation) │ │ (AI Search)   │                │
 │   │    :3000          │ │    :5678      │ │   :42110      │                │
 │   └─────────┬─────────┘ └───────┬───────┘ └───────┬───────┘                │
 │             │                   │                 │                         │
@@ -37,7 +37,7 @@
 │             ▼    ▼              ▼                 ▼                         │
 │   ┌─────────────────────────────────────────────────────────────┐          │
 │   │                    /opt/void-vault                           │          │
-│   │                    (Obsidian Vault)                          │          │
+│   │                    (Markdown Vault)                          │          │
 │   └─────────────────────────────────────────────────────────────┘          │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -53,11 +53,10 @@
 ## Key Rules
 
 1. **Dashboard hides all API secrets** — Browser never sees keys
-2. **Claude only thinks** — n8n is the only thing that acts
-3. **n8n is the integration hub** — Single point of connection to external services
-4. **Vault is permanent** — Your data, backed up, version controlled
+2. **Claude thinks, dashboard acts** — Core actions (log, memory, save) execute directly via vault filesystem
+3. **n8n for complex integrations** — Email, reminders, CRM, scheduled plans go through n8n webhooks
+4. **Vault is permanent** — All data stored as markdown files, backed up
 5. **Khoj makes vault searchable** — Semantic search via embeddings
-6. **Syncthing syncs vault** — P2P sync to all your devices
 
 ## Data Flow: "Plan my day"
 
@@ -73,31 +72,40 @@
 9. n8n → sends Telegram notification
 10. Response returns to Dashboard
 11. You see the plan in chat
-12. Syncthing → syncs new file to your Mac
-13. Khoj → re-indexes (next cycle)
+12. Khoj → re-indexes (next cycle)
+```
+
+## Data Flow: Quick Log (direct, no n8n)
+
+```
+1. You tell the agent: "log: finished the marketing review"
+2. Dashboard → POST /api/chat
+3. Claude responds with action block: {"type": "log", ...}
+4. Chat route → handleActionDirect("log") → appends to vault daily note
+5. Response returns instantly — no n8n involved
 ```
 
 ## Services
 
-| Service | Port | Purpose |
-|---------|------|---------|
-| Dashboard | 3000 | Next.js frontend + API routes |
-| n8n | 5678 | Automation workflows |
-| Khoj | 42110 | AI semantic search |
-| Syncthing | 8384 | P2P file sync |
-| PostgreSQL | 5432 | Database for n8n |
-| pgvector | 5433 | Vector DB for Khoj |
+| Service | Port | URL | Purpose |
+|---------|------|-----|---------|
+| Dashboard | 3000 | void.insighter.digital | Next.js frontend + API routes |
+| n8n | 5678 | n8n.insighter.digital | Automation workflows |
+| Khoj | 42110 | khoj.insighter.digital | AI semantic search |
+| PostgreSQL | 5432 | internal | Database for n8n |
+| pgvector | 5433 | internal | Vector DB for Khoj |
+| SearXNG | 8080 | internal | Web search for Khoj |
 
 ## Folder Structure
 
 ```
-void/
+void-000001/
 ├── app/           # Next.js pages and API routes
 ├── components/    # React components
 ├── lib/           # Utilities and API helpers
 ├── hooks/         # React hooks
 ├── docker/        # Docker Compose files
-├── vault-template/# Obsidian vault starter
+├── vault-template/# Markdown vault starter
 ├── n8n-workflows/ # Workflow JSON exports
 └── docs/          # Documentation
 ```
@@ -106,6 +114,7 @@ void/
 
 - All API keys stored in environment variables
 - Dashboard API routes proxy to internal services
-- n8n webhooks can be secured with auth headers
+- n8n webhooks secured with auth headers
 - Vault access controlled by file permissions
 - SSL termination at Coolify/Traefik level
+- Password authentication with JWT cookies (Layer 8)

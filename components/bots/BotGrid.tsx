@@ -25,23 +25,17 @@ export default function BotGrid({ bots, onBotClick }: BotGridProps) {
       {bots.map((bot) => (
         <div
           key={bot.id}
-          className="rounded-lg border cursor-pointer transition-colors"
+          className="rounded-lg border cursor-pointer void-hover-row"
           style={{
             padding: 16,
-            background: "#111218",
-            borderColor: "#1a1b20",
+            background: "var(--void-surface)",
+            borderColor: "var(--void-border)",
           }}
           onClick={() => onBotClick?.(bot)}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#1a1b20";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "#111218";
-          }}
         >
           {/* Header */}
           <div className="flex items-start justify-between gap-2" style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#fafafa" }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--void-white)" }}>
               {bot.name}
             </div>
             <Badge variant={bot.status === "ok" ? "ok" : "warn"}>
@@ -67,7 +61,7 @@ export default function BotGrid({ bots, onBotClick }: BotGridProps) {
           </div>
 
           {/* Details */}
-          <div style={{ fontSize: 11, color: "#71717a", lineHeight: 1.6 }}>
+          <div style={{ fontSize: 11, color: "var(--void-dim)", lineHeight: 1.6 }}>
             <div>Schedule: {bot.schedule}</div>
             <div>Last run: {bot.lastRun}</div>
           </div>

@@ -7,22 +7,13 @@ interface StatCardProps {
   accent?: string;
 }
 
-export default function StatCard({ label, value, sub, accent = "#f5f5f5" }: StatCardProps) {
+export default function StatCard({ label, value, sub, accent = "var(--void-accent)" }: StatCardProps) {
   return (
-    <div
-      style={{
-        padding: "14px 16px",
-        borderRadius: 8,
-        background: "#111218",
-        border: "1px solid #1a1b20",
-        flex: 1,
-        minWidth: 140,
-      }}
-    >
+    <div style={{ padding: "14px 16px" }}>
       <div
         style={{
           fontSize: 10,
-          color: "#52525b",
+          color: "var(--void-dim)",
           fontWeight: 500,
           letterSpacing: 0.6,
           textTransform: "uppercase",
@@ -42,7 +33,7 @@ export default function StatCard({ label, value, sub, accent = "#f5f5f5" }: Stat
         {value}
       </div>
       {sub && (
-        <div style={{ fontSize: 10, color: "#52525b", marginTop: 2 }}>
+        <div style={{ fontSize: 10, color: "var(--void-dim)", marginTop: 2 }}>
           {sub}
         </div>
       )}

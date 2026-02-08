@@ -224,58 +224,14 @@ body {
   background: rgba(245, 158, 11, 0.12);
 }
 
-/* Voice mode — mic button */
-.void-mic-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: none;
-  background: var(--void-surface);
-  color: var(--void-dim);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-.void-mic-btn:hover {
-  background: var(--void-surface-hover);
-  color: var(--void-accent);
-}
-.void-mic-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-@keyframes voicePulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-  50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-}
-
-.void-mic-active {
-  animation: voicePulse 1.5s ease-in-out infinite;
-  background: var(--status-urgent) !important;
-  color: #fff !important;
-}
-
-/* Empty state icon animations */
+/* Empty state icon animation */
 @keyframes iconPulseIdle {
   0%, 100% { opacity: 0.8; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.04); }
 }
 
-@keyframes iconPulseListening {
-  0%, 100% { opacity: 0.8; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.12); }
-}
-
 .void-icon-idle {
   animation: iconPulseIdle 3s ease-in-out infinite;
-}
-
-.void-icon-listening {
-  animation: iconPulseListening 1s ease-in-out infinite;
 }
 
 /* Hover row (replaces inline onMouseEnter/onMouseLeave) */

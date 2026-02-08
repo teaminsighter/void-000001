@@ -19,8 +19,8 @@ export default function SavedList({ items, onItemClick }: SavedListProps) {
     <div
       className="rounded-lg border overflow-hidden"
       style={{
-        background: "#111218",
-        borderColor: "#1a1b20",
+        background: "var(--void-surface)",
+        borderColor: "var(--void-border)",
       }}
     >
       {items.length === 0 ? (
@@ -28,7 +28,7 @@ export default function SavedList({ items, onItemClick }: SavedListProps) {
           style={{
             padding: "24px 16px",
             textAlign: "center",
-            color: "#52525b",
+            color: "var(--void-faint)",
             fontSize: 12,
           }}
         >
@@ -38,18 +38,12 @@ export default function SavedList({ items, onItemClick }: SavedListProps) {
         items.map((item) => (
           <div
             key={item.id}
-            className="border-b cursor-pointer transition-colors"
+            className="border-b cursor-pointer void-hover-row"
             style={{
               padding: "14px 16px",
-              borderColor: "#1a1b20",
+              borderColor: "var(--void-border)",
             }}
             onClick={() => onItemClick?.(item)}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#1a1b20";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-            }}
           >
             <div className="flex items-start justify-between gap-3">
               <div style={{ flex: 1 }}>
@@ -57,7 +51,7 @@ export default function SavedList({ items, onItemClick }: SavedListProps) {
                 <div
                   style={{
                     fontSize: 12.5,
-                    color: "#d4d4d8",
+                    color: "var(--void-text)",
                     marginBottom: 6,
                   }}
                 >
@@ -77,7 +71,7 @@ export default function SavedList({ items, onItemClick }: SavedListProps) {
                   >
                     {item.type}
                   </span>
-                  <span style={{ fontSize: 11, color: "#52525b" }}>
+                  <span style={{ fontSize: 11, color: "var(--void-faint)" }}>
                     {item.source}
                   </span>
                 </div>
@@ -87,7 +81,7 @@ export default function SavedList({ items, onItemClick }: SavedListProps) {
               <div
                 style={{
                   fontSize: 10.5,
-                  color: "#52525b",
+                  color: "var(--void-faint)",
                   flexShrink: 0,
                 }}
               >

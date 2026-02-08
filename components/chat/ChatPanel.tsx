@@ -1,227 +1,290 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Message } from "@/lib/types";
+import { Message, ToolAction, Attachment } from "@/lib/types";
+import { emitDataChanged, toolToEventType } from "@/lib/events";
 import ChatMessage from "./ChatMessage";
 import QuickPrompts from "./QuickPrompts";
-
-// Web Speech API types (browser-only)
-/* eslint-disable @typescript-eslint/no-explicit-any */
-interface SpeechRecognitionInstance {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onresult: ((event: any) => void) | null;
-  onerror: ((event: any) => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-}
-
-declare global {
-  interface Window {
-    SpeechRecognition: new () => SpeechRecognitionInstance;
-    webkitSpeechRecognition: new () => SpeechRecognitionInstance;
-  }
-}
-/* eslint-enable @typescript-eslint/no-explicit-any */
+import VoiceButton from "./VoiceButton";
+import FileUpload from "./FileUpload";
 
 interface ChatPanelProps {
-  initialMessages?: Message[];
+  conversationId?: string | null;
+  onConversationChange?: (id: string) => void;
+  onNewChat?: () => void;
 }
 
-export default function ChatPanel({ initialMessages = [] }: ChatPanelProps) {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+export default function ChatPanel({
+  conversationId,
+  onConversationChange,
+  onNewChat,
+}: ChatPanelProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Voice state
-  const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const [speechSupported, setSpeechSupported] = useState(false);
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const pendingSendRef = useRef(false);
+  const activeConvRef = useRef<string | null>(null);
 
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Send message to /api/chat
-  const sendMessage = useCallback(
-    async (text?: string) => {
-      const messageText = text || input.trim();
-      if (!messageText || isLoading) return;
+  // Load messages when conversationId changes
+  useEffect(() => {
+    if (conversationId && conversationId !== activeConvRef.current) {
+      activeConvRef.current = conversationId;
+      loadConversation(conversationId);
+    } else if (!conversationId) {
+      activeConvRef.current = null;
+      setMessages([]);
+    }
+  }, [conversationId]);
 
-      const userMessage: Message = {
-        id: Date.now().toString(),
+  const loadConversation = async (id: string) => {
+    try {
+      const res = await fetch(`/api/conversations/${id}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const loaded: Message[] = (data.messages || []).map(
+        (m: { id: string; role: "user" | "assistant"; content: string; created_at: string }) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          timestamp: new Date(m.created_at),
+        })
+      );
+      setMessages(loaded);
+    } catch (err) {
+      console.error("Failed to load conversation:", err);
+    }
+  };
+
+  const persistMessage = async (
+    convId: string,
+    msg: { id: string; role: "user" | "assistant"; content: string }
+  ) => {
+    try {
+      await fetch(`/api/conversations/${convId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(msg),
+      });
+    } catch (err) {
+      console.error("Failed to persist message:", err);
+    }
+  };
+
+  const ensureConversation = useCallback(
+    async (firstMessage: string): Promise<string> => {
+      if (activeConvRef.current) return activeConvRef.current;
+
+      const id = crypto.randomUUID();
+      const title = firstMessage.slice(0, 80) || "New conversation";
+
+      await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, title }),
+      });
+
+      activeConvRef.current = id;
+      onConversationChange?.(id);
+      return id;
+    },
+    [onConversationChange]
+  );
+
+  const sendMessage = async (text?: string) => {
+    const messageText = text || input.trim();
+    if (!messageText || isLoading) return;
+
+    const currentAttachments = pendingAttachments.length > 0 ? [...pendingAttachments] : undefined;
+
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: messageText,
+      timestamp: new Date(),
+      attachments: currentAttachments,
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    if (!text) setInput("");
+    setPendingAttachments([]);
+    setIsLoading(true);
+
+    const aiMessageId = crypto.randomUUID();
+
+    try {
+      const convId = await ensureConversation(messageText);
+
+      await persistMessage(convId, {
+        id: userMessage.id,
         role: "user",
-        content: messageText,
-        timestamp: new Date(),
+        content: userMessage.content,
+      });
+
+      const historyPayload = messages.map((m) => ({ role: m.role, content: m.content }));
+      const chatPayload = {
+        message: messageText,
+        history: historyPayload,
+        attachments: currentAttachments,
       };
 
-      setMessages((prev) => [...prev, userMessage]);
-      if (!text) setInput("");
-      setIsLoading(true);
-
+      // Try streaming first
+      let streamed = false;
       try {
+        const response = await fetch("/api/chat-stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(chatPayload),
+        });
+
+        if (response.ok && response.body) {
+          streamed = true;
+          let streamedText = "";
+          const streamActions: ToolAction[] = [];
+
+          // Add placeholder assistant message
+          setMessages((prev) => [
+            ...prev,
+            { id: aiMessageId, role: "assistant", content: "", timestamp: new Date() },
+          ]);
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            let eventType = "";
+            for (const line of lines) {
+              if (line.startsWith("event: ")) {
+                eventType = line.slice(7);
+              } else if (line.startsWith("data: ") && eventType) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  if (eventType === "token") {
+                    streamedText += data.text;
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === aiMessageId ? { ...m, content: streamedText } : m
+                      )
+                    );
+                  } else if (eventType === "tool_done") {
+                    streamActions.push({
+                      tool: data.tool,
+                      input: {},
+                      result: data.result,
+                      success: data.success,
+                    });
+                  } else if (eventType === "done") {
+                    // Merge final actions
+                    const finalActions = data.actions?.length > 0
+                      ? data.actions.map((a: ToolAction) => ({
+                          tool: a.tool,
+                          input: a.input,
+                          result: a.result,
+                          success: a.success,
+                        }))
+                      : streamActions.length > 0
+                      ? streamActions
+                      : undefined;
+
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === aiMessageId
+                          ? { ...m, content: streamedText, actions: finalActions }
+                          : m
+                      )
+                    );
+
+                    // Emit data-changed events
+                    if (finalActions) {
+                      const emitted = new Set<string>();
+                      for (const action of finalActions) {
+                        const eventT = toolToEventType(action.tool);
+                        if (eventT && !emitted.has(eventT)) {
+                          emitted.add(eventT);
+                          emitDataChanged(eventT, action.tool);
+                        }
+                      }
+                    }
+                  }
+                } catch {
+                  // Skip malformed JSON
+                }
+                eventType = "";
+              }
+            }
+          }
+
+          // Persist
+          await persistMessage(convId, {
+            id: aiMessageId,
+            role: "assistant",
+            content: streamedText || "...",
+          });
+        }
+      } catch {
+        // Stream failed, fall through to non-streaming
+      }
+
+      // Fallback to non-streaming
+      if (!streamed) {
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: userMessage.content,
-            history: messages.map((m) => ({ role: m.role, content: m.content })),
-          }),
+          body: JSON.stringify(chatPayload),
         });
 
         const data = await response.json();
-        const replyText =
-          data.reply || data.error || "Sorry, something went wrong.";
 
         const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: aiMessageId,
           role: "assistant",
-          content: replyText,
+          content: data.reply || data.error || "Sorry, something went wrong.",
           timestamp: new Date(),
+          actions: data.actions || undefined,
         };
         setMessages((prev) => [...prev, aiMessage]);
 
-        // If voice (TTS) is enabled, speak the response
-        if (voiceEnabled) {
-          speakText(replyText);
+        if (data.actions) {
+          const emitted = new Set<string>();
+          for (const action of data.actions as ToolAction[]) {
+            const eventType = toolToEventType(action.tool);
+            if (eventType && !emitted.has(eventType)) {
+              emitted.add(eventType);
+              emitDataChanged(eventType, action.tool);
+            }
+          }
         }
-      } catch (error) {
-        const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
+
+        await persistMessage(convId, {
+          id: aiMessage.id,
           role: "assistant",
-          content: `Error: ${error instanceof Error ? error.message : "Failed to connect"}`,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, errorMessage]);
-      } finally {
-        setIsLoading(false);
+          content: aiMessage.content,
+        });
       }
-    },
-    [input, isLoading, messages, voiceEnabled],
-  );
-
-  // Initialize speech recognition
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-
-    setSpeechSupported(true);
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-
-    recognition.onresult = (event) => {
-      const current = event.resultIndex;
-      const result = event.results[current];
-      const transcriptText = result[0].transcript;
-      setTranscript(transcriptText);
-
-      if (result.isFinal) {
-        pendingSendRef.current = true;
-        setTranscript(transcriptText);
-      }
-    };
-
-    recognition.onerror = (event) => {
-      console.error("Speech recognition error:", event.error);
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognitionRef.current = recognition;
-  }, []);
-
-  // Handle sending transcript after recognition ends
-  useEffect(() => {
-    if (!isListening && pendingSendRef.current && transcript) {
-      pendingSendRef.current = false;
-      const text = transcript;
-      setTranscript("");
-      sendMessage(text);
+    } catch (error) {
+      const errorMessage: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: `Error: ${error instanceof Error ? error.message : "Failed to connect"}`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
     }
-  }, [isListening, transcript, sendMessage]);
-
-  // Speak text via ElevenLabs
-  const speakText = async (text: string) => {
-    setIsSpeaking(true);
-    try {
-      const response = await fetch("/api/speech", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!response.ok) {
-        // Disable TTS automatically if the service is unavailable
-        console.warn("TTS unavailable (status " + response.status + "), disabling voice responses");
-        setVoiceEnabled(false);
-        setIsSpeaking(false);
-        return;
-      }
-
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-
-      if (audioRef.current) {
-        audioRef.current.src = audioUrl;
-        audioRef.current.onended = () => {
-          setIsSpeaking(false);
-          URL.revokeObjectURL(audioUrl);
-        };
-        await audioRef.current.play();
-      } else {
-        setIsSpeaking(false);
-      }
-    } catch (err) {
-      console.warn("TTS error, disabling voice responses:", err);
-      setVoiceEnabled(false);
-      setIsSpeaking(false);
-    }
-  };
-
-  const startListening = () => {
-    if (recognitionRef.current && !isListening && !isLoading) {
-      setTranscript("");
-      pendingSendRef.current = false;
-      recognitionRef.current.start();
-      setIsListening(true);
-    }
-  };
-
-  const stopListening = () => {
-    if (recognitionRef.current && isListening) {
-      recognitionRef.current.stop();
-    }
-  };
-
-  const toggleListening = () => {
-    if (isListening) {
-      stopListening();
-    } else {
-      startListening();
-    }
-  };
-
-  const handleStartVoice = () => {
-    setVoiceEnabled(true);
-    startListening();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -231,33 +294,32 @@ export default function ChatPanel({ initialMessages = [] }: ChatPanelProps) {
     }
   };
 
+  const handleNewChat = () => {
+    activeConvRef.current = null;
+    setMessages([]);
+    setInput("");
+    onNewChat?.();
+  };
+
   return (
     <div className="flex flex-col h-full">
-      {/* Hidden audio element for TTS */}
-      <audio ref={audioRef} />
-
       {/* Messages area */}
       <div className="flex-1 overflow-auto" style={{ padding: "16px 20px" }}>
         {messages.length === 0 ? (
-          /* ── Jarvis-style empty state ── */
           <div
             className="flex flex-col items-center justify-center h-full"
             style={{ color: "var(--void-faint)" }}
           >
-            {/* Pulsing icon */}
             <div
-              className={isListening ? "void-icon-listening" : "void-icon-idle"}
+              className="void-icon-idle"
               style={{
                 fontSize: 56,
                 marginBottom: 20,
-                color: isListening ? "var(--status-urgent)" : "var(--void-accent)",
-                transition: "color 0.3s",
+                color: "var(--void-accent)",
               }}
             >
               ◉
             </div>
-
-            {/* Greeting */}
             <div
               style={{
                 fontSize: 18,
@@ -269,45 +331,19 @@ export default function ChatPanel({ initialMessages = [] }: ChatPanelProps) {
               Hi, I&apos;m Void.
             </div>
             <div style={{ fontSize: 13, marginBottom: 24 }}>
-              Type or speak to begin.
+              Type to begin.
             </div>
 
-            {/* Start Voice button */}
-            {speechSupported && (
-              <button
-                onClick={handleStartVoice}
-                className="void-mic-btn"
-                style={{
-                  width: "auto",
-                  height: "auto",
-                  borderRadius: 10,
-                  padding: "12px 28px",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  fontFamily: "inherit",
-                  gap: 8,
-                  display: "flex",
-                  alignItems: "center",
-                  marginBottom: 28,
-                  background: "var(--void-accent)",
-                  color: "var(--void-bg)",
-                }}
-              >
-                <span style={{ fontSize: 16 }}>🎤</span>
-                Start Voice
-              </button>
-            )}
-
             {/* Quick prompt pills */}
-            <div className="flex gap-2 flex-wrap justify-center" style={{ maxWidth: 360 }}>
+            <div
+              className="flex gap-2 flex-wrap justify-center"
+              style={{ maxWidth: 360 }}
+            >
               {["Plan my day", "Search vault", "Check email", "Quick log"].map(
                 (prompt) => (
                   <button
                     key={prompt}
-                    onClick={() => {
-                      setInput(prompt);
-                      sendMessage(prompt);
-                    }}
+                    onClick={() => sendMessage(prompt)}
                     className="void-hover-row"
                     style={{
                       padding: "6px 14px",
@@ -369,35 +405,6 @@ export default function ChatPanel({ initialMessages = [] }: ChatPanelProps) {
         )}
       </div>
 
-      {/* Voice status indicator */}
-      {(isListening || isSpeaking) && (
-        <div
-          className="animate-fadeIn"
-          style={{
-            padding: "8px 20px",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            fontSize: 12,
-            color: isListening ? "var(--status-urgent)" : "var(--status-info)",
-            borderTop: "1px solid var(--void-border)",
-            background: "var(--void-sidebar-bg)",
-          }}
-        >
-          <span style={{ fontSize: 10 }}>
-            {isListening ? "🔴" : "🔊"}
-          </span>
-          <span style={{ fontWeight: 600 }}>
-            {isListening ? "Listening..." : "Speaking..."}
-          </span>
-          {isListening && transcript && (
-            <span style={{ color: "var(--void-muted)", fontStyle: "italic" }}>
-              &quot;{transcript}&quot;
-            </span>
-          )}
-        </div>
-      )}
-
       {/* Input area */}
       <div
         className="border-t"
@@ -407,70 +414,103 @@ export default function ChatPanel({ initialMessages = [] }: ChatPanelProps) {
           borderColor: "var(--void-border)",
         }}
       >
-        {/* Quick prompts (only when there are messages) */}
+        {/* Quick prompts + New Chat */}
         {messages.length > 0 && (
-          <div style={{ marginBottom: 8 }}>
+          <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
             <QuickPrompts onSelect={(prompt) => setInput(prompt)} />
+            <button
+              onClick={handleNewChat}
+              style={{
+                padding: "4px 10px",
+                borderRadius: 6,
+                border: "1px solid var(--void-border)",
+                background: "transparent",
+                color: "var(--void-dim)",
+                fontSize: 11,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                whiteSpace: "nowrap",
+                marginLeft: 8,
+              }}
+              className="void-hover-row"
+            >
+              + New Chat
+            </button>
+          </div>
+        )}
+
+        {/* Pending attachments preview */}
+        {pendingAttachments.length > 0 && (
+          <div className="flex gap-2 flex-wrap" style={{ marginBottom: 8 }}>
+            {pendingAttachments.map((att) => (
+              <div
+                key={att.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  background: "var(--void-surface)",
+                  border: "1px solid var(--void-border)",
+                  fontSize: 11,
+                  color: "var(--void-dim)",
+                }}
+              >
+                <span>{att.type === "image" ? "🖼" : "📄"}</span>
+                <span style={{ maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {att.name}
+                </span>
+                <button
+                  onClick={() => setPendingAttachments((prev) => prev.filter((a) => a.id !== att.id))}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "var(--void-faint)",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    padding: 0,
+                    lineHeight: 1,
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
         {/* Input row */}
-        <div className="flex gap-2 items-center">
-          {/* Mic button */}
-          {speechSupported && (
-            <button
-              onClick={toggleListening}
-              disabled={isLoading}
-              className={`void-mic-btn ${isListening ? "void-mic-active" : ""}`}
-              title={isListening ? "Stop listening" : "Start listening"}
-            >
-              🎤
-            </button>
-          )}
-
+        <div className="flex gap-2">
+          <FileUpload
+            onUpload={(att) => setPendingAttachments((prev) => [...prev, att])}
+            disabled={isLoading}
+          />
           <input
-            value={isListening ? transcript : input}
+            value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={
-              isListening ? "Listening..." : "Tell your agent what to do..."
-            }
-            disabled={isLoading || isListening}
-            readOnly={isListening}
+            placeholder="Tell your agent what to do..."
+            disabled={isLoading}
             className="flex-1 outline-none"
             style={{
               padding: "10px 14px",
               borderRadius: 8,
-              border: `1px solid ${isListening ? "var(--status-urgent)" : "var(--void-border)"}`,
+              border: "1px solid var(--void-border)",
               background: "var(--void-surface)",
               color: "var(--void-white)",
               fontSize: 13,
               fontFamily: "inherit",
               opacity: isLoading ? 0.5 : 1,
-              transition: "border-color 0.2s",
             }}
           />
-
-          {/* TTS toggle */}
-          {speechSupported && (
-            <button
-              onClick={() => setVoiceEnabled((v) => !v)}
-              className="void-mic-btn"
-              title={voiceEnabled ? "Disable voice responses" : "Enable voice responses"}
-              style={{
-                color: voiceEnabled ? "var(--void-accent)" : undefined,
-                background: voiceEnabled
-                  ? "rgba(245, 158, 11, 0.1)"
-                  : undefined,
-              }}
-            >
-              🔊
-            </button>
-          )}
-
+          <VoiceButton
+            onTranscript={(text) => sendMessage(text)}
+            disabled={isLoading}
+          />
           <button
             onClick={() => sendMessage()}
-            disabled={isLoading || (!input.trim() && !isListening)}
+            disabled={isLoading || !input.trim()}
             style={{
               padding: "10px 20px",
               borderRadius: 8,
@@ -479,12 +519,9 @@ export default function ChatPanel({ initialMessages = [] }: ChatPanelProps) {
               color: "var(--void-bg)",
               fontSize: 12,
               fontWeight: 700,
-              cursor:
-                isLoading || (!input.trim() && !isListening)
-                  ? "not-allowed"
-                  : "pointer",
+              cursor: isLoading || !input.trim() ? "not-allowed" : "pointer",
               fontFamily: "inherit",
-              opacity: isLoading || (!input.trim() && !isListening) ? 0.5 : 1,
+              opacity: isLoading || !input.trim() ? 0.5 : 1,
             }}
           >
             Send

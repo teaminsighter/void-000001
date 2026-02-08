@@ -111,7 +111,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
         className="rounded-xl border overflow-hidden animate-fadeIn"
         style={{
           width: 500,
-          background: "#111218",
+          background: "var(--void-surface)",
           borderColor: "var(--void-border)",
           boxShadow: "0 20px 60px rgba(0, 0, 0, 0.4)",
         }}
@@ -129,7 +129,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
             fontSize: 14,
             background: "transparent",
             borderColor: "var(--void-border)",
-            color: "#fafafa",
+            color: "var(--void-white)",
           }}
         />
 
@@ -141,7 +141,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
           {allResults.length === 0 ? (
             <div
               className="text-center py-8"
-              style={{ color: "#52525b", fontSize: 13 }}
+              style={{ color: "var(--void-faint)", fontSize: 13 }}
             >
               No results found
             </div>
@@ -166,14 +166,14 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                 <span
                   style={{
                     fontSize: 14,
-                    color: "#52525b",
+                    color: "var(--void-faint)",
                     width: 24,
                     textAlign: "center",
                   }}
                 >
                   {result.type === "page" ? result.icon : "◇"}
                 </span>
-                <span style={{ fontSize: 13, color: "#d4d4d8", flex: 1 }}>
+                <span style={{ fontSize: 13, color: "var(--void-text)", flex: 1 }}>
                   {result.type === "page" ? result.label : result.name}
                 </span>
                 {result.type === "file" && (
@@ -196,17 +196,17 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
         >
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1" style={{ fontSize: 10, color: "#3f3f46" }}>
-              <kbd className="px-1 rounded" style={{ background: "#1a1b20" }}>↑</kbd>
-              <kbd className="px-1 rounded" style={{ background: "#1a1b20" }}>↓</kbd>
+              <kbd className="px-1 rounded" style={{ background: "var(--void-border)" }}>↑</kbd>
+              <kbd className="px-1 rounded" style={{ background: "var(--void-border)" }}>↓</kbd>
               <span>to navigate</span>
             </span>
             <span className="flex items-center gap-1" style={{ fontSize: 10, color: "#3f3f46" }}>
-              <kbd className="px-1 rounded" style={{ background: "#1a1b20" }}>↵</kbd>
+              <kbd className="px-1 rounded" style={{ background: "var(--void-border)" }}>↵</kbd>
               <span>to select</span>
             </span>
           </div>
           <span className="flex items-center gap-1" style={{ fontSize: 10, color: "#3f3f46" }}>
-            <kbd className="px-1 rounded" style={{ background: "#1a1b20" }}>esc</kbd>
+            <kbd className="px-1 rounded" style={{ background: "var(--void-border)" }}>esc</kbd>
             <span>to close</span>
           </span>
         </div>

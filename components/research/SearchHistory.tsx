@@ -15,18 +15,18 @@ export default function SearchHistory({ history }: SearchHistoryProps) {
     <div
       className="rounded-lg border"
       style={{
-        background: "#111218",
-        borderColor: "#1a1b20",
+        background: "var(--void-surface)",
+        borderColor: "var(--void-border)",
       }}
     >
       <div
         className="border-b"
         style={{
           padding: "12px 16px",
-          borderColor: "#1a1b20",
+          borderColor: "var(--void-border)",
         }}
       >
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#fafafa" }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--void-white)" }}>
           Recent Searches
         </div>
       </div>
@@ -35,21 +35,15 @@ export default function SearchHistory({ history }: SearchHistoryProps) {
         {history.map((item, index) => (
           <div
             key={index}
-            className="cursor-pointer transition-colors"
+            className="cursor-pointer void-hover-row"
             style={{
               padding: "12px 16px",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#1a1b20";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
             }}
           >
             <div
               style={{
                 fontSize: 12.5,
-                color: "#d4d4d8",
+                color: "var(--void-text)",
                 marginBottom: 6,
               }}
             >
@@ -59,7 +53,7 @@ export default function SearchHistory({ history }: SearchHistoryProps) {
               <span style={{ color: "#34d399" }}>
                 {item.results} results
               </span>
-              <span style={{ color: "#52525b", marginLeft: "auto" }}>
+              <span style={{ color: "var(--void-faint)", marginLeft: "auto" }}>
                 {item.timestamp}
               </span>
             </div>

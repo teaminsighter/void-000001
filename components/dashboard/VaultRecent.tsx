@@ -15,28 +15,22 @@ export default function VaultRecent({ files, limit = 4 }: VaultRecentProps) {
       {displayFiles.map((file, index) => (
         <div
           key={index}
-          className="flex items-center gap-2 rounded-md transition-colors cursor-pointer"
+          className="flex items-center gap-2 rounded-md transition-all duration-150 cursor-pointer hover:bg-[rgba(128,128,128,0.05)]"
           style={{ padding: "6px 8px" }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
-          }}
         >
           {/* Icon */}
-          <span style={{ fontSize: 13, color: "#52525b" }}>◇</span>
+          <span style={{ fontSize: 13, color: "var(--void-dim)" }}>◇</span>
 
           {/* File info */}
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11.5, color: "#d4d4d8" }}>{file.name}</div>
-            <div style={{ fontSize: 9.5, color: "#3f3f46" }}>{file.folder}</div>
+            <div style={{ fontSize: 11.5, color: "var(--void-text)" }}>{file.name}</div>
+            <div style={{ fontSize: 9.5, color: "var(--void-faint)" }}>{file.folder}</div>
           </div>
 
           {/* Modified */}
           <span
             className="font-mono"
-            style={{ fontSize: 9.5, color: "#3f3f46" }}
+            style={{ fontSize: 9.5, color: "var(--void-faint)" }}
           >
             {file.modified}
           </span>

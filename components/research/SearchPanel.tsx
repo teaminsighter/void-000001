@@ -23,8 +23,8 @@ export default function SearchPanel({ onSearch, isLoading }: SearchPanelProps) {
         className="rounded-lg border"
         style={{
           padding: 16,
-          background: "#111218",
-          borderColor: "#1a1b20",
+          background: "var(--void-surface)",
+          borderColor: "var(--void-border)",
         }}
       >
         <div className="flex gap-2">
@@ -37,9 +37,9 @@ export default function SearchPanel({ onSearch, isLoading }: SearchPanelProps) {
             style={{
               padding: "12px 16px",
               borderRadius: 8,
-              border: "1px solid #1a1b20",
-              background: "#0c0d10",
-              color: "#fafafa",
+              border: "1px solid var(--void-border)",
+              background: "var(--void-bg)",
+              color: "var(--void-white)",
               fontSize: 14,
             }}
           />
@@ -51,7 +51,7 @@ export default function SearchPanel({ onSearch, isLoading }: SearchPanelProps) {
               borderRadius: 8,
               border: "none",
               background: isLoading ? "#52525b" : "#a78bfa",
-              color: "#0c0d10",
+              color: "var(--void-bg)",
               fontSize: 13,
               fontWeight: 600,
               cursor: isLoading ? "not-allowed" : "pointer",
@@ -62,7 +62,7 @@ export default function SearchPanel({ onSearch, isLoading }: SearchPanelProps) {
         </div>
         <div
           className="flex gap-4"
-          style={{ marginTop: 12, fontSize: 11, color: "#52525b" }}
+          style={{ marginTop: 12, fontSize: 11, color: "var(--void-faint)" }}
         >
           <span>🔍 Searches both your vault (Khoj) and the web (SearXNG)</span>
         </div>

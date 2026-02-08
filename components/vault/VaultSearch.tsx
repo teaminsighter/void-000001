@@ -23,9 +23,9 @@ export default function VaultSearch({
           padding: "10px 14px",
           paddingLeft: 36,
           borderRadius: 8,
-          border: "1px solid #1a1b20",
-          background: "#111218",
-          color: "#fafafa",
+          border: "1px solid var(--void-border)",
+          background: "var(--void-surface)",
+          color: "var(--void-white)",
           fontSize: 13,
         }}
       />
@@ -35,7 +35,7 @@ export default function VaultSearch({
           left: 12,
           top: "50%",
           transform: "translateY(-50%)",
-          color: "#52525b",
+          color: "var(--void-faint)",
           fontSize: 14,
         }}
       >

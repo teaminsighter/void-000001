@@ -19,10 +19,10 @@ export default function SavedPage() {
     <div style={{ padding: 24, maxWidth: 800 }}>
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 600, color: "#fafafa" }}>
+        <h1 className="void-heading">
           Saved Items
         </h1>
-        <div style={{ fontSize: 12, color: "#52525b", marginTop: 4 }}>
+        <div className="void-subheading">
           {MOCK_SAVED_ITEMS.length} bookmarks saved to vault
         </div>
       </div>
@@ -45,20 +45,18 @@ export default function SavedPage() {
 
       {/* Add Item CTA */}
       <div
-        className="rounded-lg border"
+        className="void-card"
         style={{
           marginTop: 16,
           padding: 16,
-          background: "#111218",
-          borderColor: "#1a1b20",
         }}
       >
         <div className="flex items-center justify-between">
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#fafafa" }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--void-white)" }}>
               Save New Item
             </div>
-            <div style={{ fontSize: 11, color: "#52525b", marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: "var(--void-faint)", marginTop: 2 }}>
               Add articles, tutorials, or videos to your vault
             </div>
           </div>
@@ -68,7 +66,7 @@ export default function SavedPage() {
               borderRadius: 6,
               border: "none",
               background: "#fbbf24",
-              color: "#0c0d10",
+              color: "var(--void-bg)",
               fontSize: 12,
               fontWeight: 600,
               cursor: "pointer",

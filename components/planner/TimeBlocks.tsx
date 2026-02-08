@@ -19,15 +19,15 @@ export default function TimeBlocks({ schedule }: TimeBlocksProps) {
       <div
         className="rounded-lg border"
         style={{
-          background: "#111218",
-          borderColor: "#1a1b20",
+          background: "var(--void-surface)",
+          borderColor: "var(--void-border)",
           padding: 24,
         }}
       >
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#fafafa", marginBottom: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--void-white)", marginBottom: 8 }}>
           Today's Schedule
         </div>
-        <div style={{ fontSize: 12, color: "#52525b" }}>
+        <div style={{ fontSize: 12, color: "var(--void-faint)" }}>
           No schedule yet. Click "Plan My Day" to generate one.
         </div>
       </div>
@@ -38,8 +38,8 @@ export default function TimeBlocks({ schedule }: TimeBlocksProps) {
     <div
       className="rounded-lg border"
       style={{
-        background: "#111218",
-        borderColor: "#1a1b20",
+        background: "var(--void-surface)",
+        borderColor: "var(--void-border)",
       }}
     >
       {/* Header */}
@@ -47,13 +47,13 @@ export default function TimeBlocks({ schedule }: TimeBlocksProps) {
         className="border-b"
         style={{
           padding: "12px 16px",
-          borderColor: "#1a1b20",
+          borderColor: "var(--void-border)",
         }}
       >
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#fafafa" }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--void-white)" }}>
           Today's Schedule
         </div>
-        <div style={{ fontSize: 11, color: "#52525b", marginTop: 2 }}>
+        <div style={{ fontSize: 11, color: "var(--void-faint)", marginTop: 2 }}>
           Time-blocked day plan
         </div>
       </div>
@@ -78,7 +78,7 @@ export default function TimeBlocks({ schedule }: TimeBlocksProps) {
               className="font-mono"
               style={{
                 fontSize: 11,
-                color: "#52525b",
+                color: "var(--void-faint)",
                 width: 45,
                 flexShrink: 0,
               }}

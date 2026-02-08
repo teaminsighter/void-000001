@@ -3,7 +3,7 @@
 ## Base URL
 
 - **Local**: `http://localhost:3000/api`
-- **Production**: `https://app.yourdomain.com/api`
+- **Production**: `https://void.insighter.digital/api`
 
 ---
 
@@ -34,7 +34,12 @@ Check system health status.
 
 ### `POST /api/chat`
 
-Send a message to the AI agent.
+Send a message to the AI agent. The chat route automatically:
+1. Searches Khoj for relevant vault context
+2. Builds a system prompt with context
+3. Calls Claude API
+4. Parses action blocks from the response
+5. Executes actions (direct for log/memory/save, n8n for plan/email/remind/crm)
 
 **Request:**
 ```json
@@ -52,10 +57,26 @@ Send a message to the AI agent.
 {
   "reply": "Here's your plan for today...",
   "actions": [
-    { "type": "plan", "payload": { "date": "2026-02-03" } }
-  ]
+    { "action": "plan", "success": true, "data": { "message": "Plan created" } }
+  ],
+  "context": {
+    "searchResults": 3,
+    "files": ["07-Agent-Memory/preferences.md"]
+  }
 }
 ```
+
+### Action Routing
+
+| Action Type | Execution | Description |
+|-------------|-----------|-------------|
+| `log` | **Direct** (vault filesystem) | Append to daily note |
+| `memory` | **Direct** (vault filesystem) | Save to agent memory files |
+| `save` | **Direct** (vault filesystem) | Create new vault file |
+| `plan` | n8n webhook | Create daily plan |
+| `email` | n8n webhook | Read/send email |
+| `remind` | n8n webhook | Schedule reminder |
+| `crm` | n8n webhook | Query/update CRM |
 
 ---
 
@@ -85,6 +106,70 @@ Search the vault using Khoj semantic search.
     }
   ],
   "count": 1
+}
+```
+
+---
+
+## Planner
+
+### `GET /api/planner`
+
+Get today's tasks parsed from the daily note.
+
+**Response:**
+```json
+{
+  "tasks": [
+    {
+      "id": "1",
+      "text": "Review marketing plan",
+      "tag": "Office",
+      "priority": "high",
+      "done": false
+    }
+  ],
+  "date": "2026-02-07"
+}
+```
+
+---
+
+## Speech
+
+### `POST /api/speech`
+
+Convert text to speech via ElevenLabs.
+
+**Request:**
+```json
+{
+  "text": "Good morning, here's your plan for today..."
+}
+```
+
+**Response:** Audio stream (mp3)
+
+---
+
+## Practice
+
+### `POST /api/practice`
+
+Practice/conversation mode with Claude.
+
+**Request:**
+```json
+{
+  "message": "Let's practice presenting my quarterly review",
+  "history": []
+}
+```
+
+**Response:**
+```json
+{
+  "reply": "Great! Let's start..."
 }
 ```
 
@@ -161,9 +246,40 @@ Write a file to the vault.
 
 ## Actions
 
+### `POST /api/action/log`
+
+Add a quick log entry. **Writes directly to vault** (no n8n).
+
+**Request:**
+```json
+{
+  "text": "Finished the marketing review"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Logged to daily note"
+}
+```
+
+### `POST /api/action/memory`
+
+Save to agent memory. **Writes directly to vault** (no n8n).
+
+**Request:**
+```json
+{
+  "type": "preference",
+  "content": "User prefers morning meetings"
+}
+```
+
 ### `POST /api/action/plan`
 
-Trigger daily plan creation.
+Trigger daily plan creation via n8n.
 
 **Request:**
 ```json
@@ -173,20 +289,9 @@ Trigger daily plan creation.
 }
 ```
 
-### `POST /api/action/log`
-
-Add a quick log entry.
-
-**Request:**
-```json
-{
-  "text": "Finished the marketing review"
-}
-```
-
 ### `POST /api/action/email`
 
-Email operations.
+Email operations via n8n.
 
 **Request:**
 ```json
@@ -196,19 +301,9 @@ Email operations.
 }
 ```
 
-Or for sending:
-```json
-{
-  "action": "send",
-  "to": "email@example.com",
-  "subject": "Subject",
-  "body": "Email body..."
-}
-```
-
 ### `POST /api/action/remind`
 
-Schedule a reminder.
+Schedule a reminder via n8n.
 
 **Request:**
 ```json
@@ -220,25 +315,13 @@ Schedule a reminder.
 
 ### `POST /api/action/crm`
 
-CRM operations.
+CRM operations via n8n.
 
 **Request:**
 ```json
 {
   "action": "list",
   "filter": "active"
-}
-```
-
-### `POST /api/action/memory`
-
-Save to agent memory.
-
-**Request:**
-```json
-{
-  "type": "preference",
-  "content": "User prefers morning meetings"
 }
 ```
 

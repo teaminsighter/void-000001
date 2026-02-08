@@ -24,10 +24,10 @@ export default function BotsPage() {
     <div style={{ padding: 24, maxWidth: 1200 }}>
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 600, color: "#fafafa" }}>
+        <h1 className="void-heading">
           Automation Bots
         </h1>
-        <div style={{ fontSize: 12, color: "#52525b", marginTop: 4 }}>
+        <div className="void-subheading">
           {MOCK_BOTS.length} workflows · {activeCount} active · {warningCount} warnings
         </div>
       </div>
@@ -50,20 +50,18 @@ export default function BotsPage() {
 
       {/* n8n Link */}
       <div
-        className="rounded-lg border"
+        className="void-card"
         style={{
           marginTop: 20,
           padding: 16,
-          background: "#111218",
-          borderColor: "#1a1b20",
         }}
       >
         <div className="flex items-center justify-between">
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#fafafa" }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--void-white)" }}>
               n8n Workflow Editor
             </div>
-            <div style={{ fontSize: 11, color: "#52525b", marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: "var(--void-faint)", marginTop: 2 }}>
               Open n8n to create or edit workflows
             </div>
           </div>
@@ -73,7 +71,7 @@ export default function BotsPage() {
               borderRadius: 6,
               border: "none",
               background: "#22c55e",
-              color: "#0c0d10",
+              color: "var(--void-bg)",
               fontSize: 12,
               fontWeight: 600,
               cursor: "pointer",

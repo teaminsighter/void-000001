@@ -25,10 +25,10 @@ export default function MailPage() {
     <div style={{ padding: 24, maxWidth: 800 }}>
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 600, color: "#fafafa" }}>
+        <h1 className="void-heading">
           Mail
         </h1>
-        <div style={{ fontSize: 12, color: "#52525b", marginTop: 4 }}>
+        <div className="void-subheading">
           {unreadCount} unread · {urgentCount} urgent
         </div>
       </div>
@@ -49,19 +49,17 @@ export default function MailPage() {
       {/* Email List or Empty State */}
       {!isConnected ? (
         <div
-          className="rounded-lg border"
+          className="void-card"
           style={{
             padding: 32,
-            background: "#111218",
-            borderColor: "#1a1b20",
             textAlign: "center",
           }}
         >
           <div style={{ fontSize: 32, marginBottom: 12 }}>✉</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#fafafa", marginBottom: 8 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--void-white)", marginBottom: 8 }}>
             Email not connected
           </div>
-          <div style={{ fontSize: 12, color: "#52525b", marginBottom: 16, maxWidth: 300, margin: "0 auto 16px" }}>
+          <div style={{ fontSize: 12, color: "var(--void-faint)", marginBottom: 16, maxWidth: 300, margin: "0 auto 16px" }}>
             Connect your email account to view and manage emails from the dashboard.
           </div>
           <button
@@ -70,7 +68,7 @@ export default function MailPage() {
               borderRadius: 6,
               border: "none",
               background: "#f59e0b",
-              color: "#0c0d10",
+              color: "var(--void-bg)",
               fontSize: 12,
               fontWeight: 600,
               cursor: "pointer",
@@ -85,21 +83,19 @@ export default function MailPage() {
 
       {/* Quick Actions */}
       <div
-        className="rounded-lg border"
+        className="void-card"
         style={{
           marginTop: 16,
           padding: 16,
-          background: "#111218",
-          borderColor: "#1a1b20",
           opacity: isConnected ? 1 : 0.5,
         }}
       >
         <div className="flex items-center justify-between">
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#fafafa" }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--void-white)" }}>
               Email Actions
             </div>
-            <div style={{ fontSize: 11, color: "#52525b", marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: "var(--void-faint)", marginTop: 2 }}>
               Let the agent handle email tasks
             </div>
           </div>
@@ -109,9 +105,9 @@ export default function MailPage() {
               style={{
                 padding: "8px 16px",
                 borderRadius: 6,
-                border: "1px solid #1a1b20",
+                border: "1px solid var(--void-border)",
                 background: "transparent",
-                color: "#71717a",
+                color: "var(--void-dim)",
                 fontSize: 12,
                 cursor: isConnected ? "pointer" : "not-allowed",
               }}
@@ -125,7 +121,7 @@ export default function MailPage() {
                 borderRadius: 6,
                 border: "none",
                 background: isConnected ? "#f59e0b" : "#52525b",
-                color: "#0c0d10",
+                color: "var(--void-bg)",
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: isConnected ? "pointer" : "not-allowed",

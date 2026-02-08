@@ -12,8 +12,8 @@ export default function FileTable({ files, onFileClick }: FileTableProps) {
     <div
       className="rounded-lg border overflow-hidden"
       style={{
-        background: "#111218",
-        borderColor: "#1a1b20",
+        background: "var(--void-surface)",
+        borderColor: "var(--void-border)",
       }}
     >
       {/* Header Row */}
@@ -22,20 +22,20 @@ export default function FileTable({ files, onFileClick }: FileTableProps) {
         style={{
           gridTemplateColumns: "1fr 140px 100px 80px",
           padding: "10px 16px",
-          borderColor: "#1a1b20",
-          background: "#0c0d10",
+          borderColor: "var(--void-border)",
+          background: "var(--void-bg)",
         }}
       >
-        <div style={{ fontSize: 10, color: "#52525b", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
+        <div style={{ fontSize: 10, color: "var(--void-faint)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
           Name
         </div>
-        <div style={{ fontSize: 10, color: "#52525b", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
+        <div style={{ fontSize: 10, color: "var(--void-faint)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
           Folder
         </div>
-        <div style={{ fontSize: 10, color: "#52525b", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
+        <div style={{ fontSize: 10, color: "var(--void-faint)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
           Modified
         </div>
-        <div style={{ fontSize: 10, color: "#52525b", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "right" }}>
+        <div style={{ fontSize: 10, color: "var(--void-faint)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "right" }}>
           Size
         </div>
       </div>
@@ -46,7 +46,7 @@ export default function FileTable({ files, onFileClick }: FileTableProps) {
           style={{
             padding: "24px 16px",
             textAlign: "center",
-            color: "#52525b",
+            color: "var(--void-faint)",
             fontSize: 12,
           }}
         >
@@ -56,35 +56,29 @@ export default function FileTable({ files, onFileClick }: FileTableProps) {
         files.map((file, index) => (
           <div
             key={index}
-            className="grid border-b cursor-pointer transition-colors"
+            className="grid border-b cursor-pointer void-hover-row"
             style={{
               gridTemplateColumns: "1fr 140px 100px 80px",
               padding: "12px 16px",
-              borderColor: "#1a1b20",
+              borderColor: "var(--void-border)",
             }}
             onClick={() => onFileClick?.(file)}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#1a1b20";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-            }}
           >
-            <div style={{ fontSize: 12.5, color: "#d4d4d8" }}>
+            <div style={{ fontSize: 12.5, color: "var(--void-text)" }}>
               {file.name}
             </div>
             <div
               className="font-mono"
-              style={{ fontSize: 11, color: "#71717a" }}
+              style={{ fontSize: 11, color: "var(--void-dim)" }}
             >
               {file.folder}
             </div>
-            <div style={{ fontSize: 11, color: "#52525b" }}>
+            <div style={{ fontSize: 11, color: "var(--void-faint)" }}>
               {file.modified}
             </div>
             <div
               className="font-mono"
-              style={{ fontSize: 11, color: "#52525b", textAlign: "right" }}
+              style={{ fontSize: 11, color: "var(--void-faint)", textAlign: "right" }}
             >
               {file.size}
             </div>

@@ -20,24 +20,16 @@ export default function QuickPrompts({ onSelect }: QuickPromptsProps) {
         <button
           key={index}
           onClick={() => onSelect(prompt)}
-          className="transition-colors"
+          className="void-hover-row"
           style={{
             padding: "4px 10px",
             borderRadius: 5,
-            border: "1px solid #1a1b20",
-            background: "#111218",
-            color: "#71717a",
+            border: "1px solid var(--void-border)",
+            background: "var(--void-surface)",
+            color: "var(--void-dim)",
             fontSize: 10.5,
             cursor: "pointer",
             fontFamily: "inherit",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#1a1b20";
-            e.currentTarget.style.color = "#a1a1aa";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "#111218";
-            e.currentTarget.style.color = "#71717a";
           }}
         >
           {prompt}

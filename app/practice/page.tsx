@@ -188,10 +188,10 @@ export default function PracticePage() {
 
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: "#fafafa" }}>
+        <h1 className="void-heading">
           English Practice
         </h1>
-        <p style={{ fontSize: 13, color: "#71717a", marginTop: 4 }}>
+        <p className="void-subheading">
           Speak naturally. I'll help you improve your English.
         </p>
       </div>
@@ -199,9 +199,9 @@ export default function PracticePage() {
       {/* Conversation Area */}
       <div
         style={{
-          background: "#111218",
+          background: "var(--void-surface)",
           borderRadius: 12,
-          border: "1px solid #1a1b20",
+          border: "1px solid var(--void-border)",
           minHeight: 400,
           maxHeight: 500,
           overflow: "auto",
@@ -216,7 +216,7 @@ export default function PracticePage() {
               alignItems: "center",
               justifyContent: "center",
               height: 400,
-              color: "#52525b",
+              color: "var(--void-faint)",
             }}
           >
             <div style={{ fontSize: 48, marginBottom: 16 }}>🎤</div>
@@ -230,7 +230,7 @@ export default function PracticePage() {
                 borderRadius: 8,
                 border: "none",
                 background: "#34d399",
-                color: "#0c0d10",
+                color: "var(--void-bg)",
                 fontSize: 14,
                 fontWeight: 600,
                 cursor: "pointer",
@@ -286,10 +286,10 @@ export default function PracticePage() {
         <div
           style={{
             padding: "12px 16px",
-            background: "#18181b",
+            background: "var(--void-surface)",
             borderRadius: 8,
             marginBottom: 16,
-            color: "#a1a1aa",
+            color: "var(--void-muted)",
             fontSize: 14,
           }}
         >
@@ -366,7 +366,7 @@ export default function PracticePage() {
           textAlign: "center",
           marginTop: 12,
           fontSize: 13,
-          color: "#71717a",
+          color: "var(--void-dim)",
         }}
       >
         {isListening
@@ -395,9 +395,9 @@ export default function PracticePage() {
             style={{
               padding: "8px 16px",
               borderRadius: 6,
-              border: "1px solid #27272a",
+              border: "1px solid var(--void-border)",
               background: "transparent",
-              color: "#71717a",
+              color: "var(--void-dim)",
               fontSize: 12,
               cursor: "pointer",
             }}
@@ -413,9 +413,9 @@ export default function PracticePage() {
             style={{
               padding: "8px 16px",
               borderRadius: 6,
-              border: "1px solid #27272a",
+              border: "1px solid var(--void-border)",
               background: "transparent",
-              color: "#71717a",
+              color: "var(--void-dim)",
               fontSize: 12,
               cursor: isSpeaking ? "not-allowed" : "pointer",
             }}
@@ -430,16 +430,16 @@ export default function PracticePage() {
         style={{
           marginTop: 24,
           padding: 16,
-          background: "#111218",
+          background: "var(--void-surface)",
           borderRadius: 8,
-          border: "1px solid #1a1b20",
+          border: "1px solid var(--void-border)",
         }}
       >
         <div
           style={{
             fontSize: 12,
             fontWeight: 600,
-            color: "#fafafa",
+            color: "var(--void-white)",
             marginBottom: 8,
           }}
         >
@@ -448,7 +448,7 @@ export default function PracticePage() {
         <ul
           style={{
             fontSize: 12,
-            color: "#71717a",
+            color: "var(--void-dim)",
             margin: 0,
             paddingLeft: 20,
             lineHeight: 1.8,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   StatCard,
@@ -10,24 +10,19 @@ import {
 } from "@/components/dashboard";
 import { TODAY, getGreeting } from "@/lib/mock-data";
 import { Task, VaultFile } from "@/lib/types";
+import { onDataChanged } from "@/lib/events";
 
 export default function HomePage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [vaultFiles, setVaultFiles] = useState<VaultFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
-      // Load tasks from planner
       const plannerRes = await fetch("/api/planner");
       const plannerData = await plannerRes.json();
       setTasks(plannerData.tasks || []);
 
-      // Load recent vault files
       const vaultRes = await fetch("/api/vault/list");
       const vaultData = await vaultRes.json();
       setVaultFiles(vaultData.files || []);
@@ -36,7 +31,18 @@ export default function HomePage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
+
+  // Auto-refresh when agent modifies data via chat
+  useEffect(() => {
+    return onDataChanged(() => {
+      loadDashboardData();
+    });
+  }, [loadDashboardData]);
 
   const toggleTask = (id: string) => {
     setTasks((prev) =>
@@ -48,240 +54,184 @@ export default function HomePage() {
   const highPriorityTasks = tasks.filter((t) => !t.done && t.priority === "high").length;
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100 }}>
+    <div className="p-6 animate-fadeIn">
       {/* Greeting */}
-      <div style={{ marginBottom: 24 }}>
+      <div className="mb-6">
         <div
-          className="font-mono"
-          style={{
-            fontSize: 10,
-            color: "#52525b",
-            fontWeight: 500,
-            letterSpacing: 1,
-            textTransform: "uppercase",
-          }}
+          className="font-mono text-[10px] font-medium tracking-wider uppercase"
+          style={{ color: "var(--void-dim)" }}
         >
           {TODAY}
         </div>
         <div
-          style={{
-            fontSize: 24,
-            fontWeight: 700,
-            color: "#fafafa",
-            marginTop: 4,
-          }}
+          className="text-2xl font-bold mt-1"
+          style={{ color: "var(--void-white)" }}
         >
           {getGreeting()}, boss.
         </div>
-        <div style={{ fontSize: 13, color: "#71717a", marginTop: 2 }}>
-          {highPriorityTasks} urgent tasks · {vaultFiles.length} vault notes
+        <div
+          className="text-[13px] mt-0.5"
+          style={{ color: "var(--void-muted)" }}
+        >
+          {isLoading
+            ? "Loading..."
+            : `${highPriorityTasks} urgent tasks · ${vaultFiles.length} vault notes`}
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div style={{ marginBottom: 24 }}>
+      <div className="mb-6">
         <QuickActions />
       </div>
 
       {/* Stats Row */}
-      <div className="flex gap-2.5 flex-wrap" style={{ marginBottom: 24 }}>
-        <StatCard
-          label="Tasks Today"
-          value={`${completedTasks}/${tasks.length}`}
-          sub={highPriorityTasks > 0 ? `${highPriorityTasks} high priority` : "All caught up"}
-          accent="#f59e0b"
-        />
-        <StatCard
-          label="Vault Notes"
-          value={vaultFiles.length}
-          sub="Semantic search ready"
-          accent="#34d399"
-        />
-        <StatCard
-          label="Mail"
-          value="—"
-          sub="Not connected"
-          accent="#ef4444"
-        />
-        <StatCard
-          label="Agent"
-          value="Ready"
-          sub="Void-Haki online"
-          accent="#a78bfa"
-        />
+      <div
+        className="grid grid-cols-4 mb-6 overflow-hidden"
+        style={{
+          background: "var(--void-surface)",
+          border: "1px solid var(--void-border)",
+          borderRadius: 12,
+        }}
+      >
+        <div style={{ borderRight: "1px solid var(--void-border)" }}>
+          <StatCard
+            label="Tasks Today"
+            value={`${completedTasks}/${tasks.length}`}
+            sub={highPriorityTasks > 0 ? `${highPriorityTasks} high priority` : "All caught up"}
+            accent="#f59e0b"
+          />
+        </div>
+        <div style={{ borderRight: "1px solid var(--void-border)" }}>
+          <StatCard
+            label="Vault Notes"
+            value={vaultFiles.length}
+            sub="Semantic search ready"
+            accent="#34d399"
+          />
+        </div>
+        <div style={{ borderRight: "1px solid var(--void-border)" }}>
+          <StatCard
+            label="Mail"
+            value="—"
+            sub="Not connected"
+            accent="#ef4444"
+          />
+        </div>
+        <div>
+          <StatCard
+            label="Agent"
+            value="Ready"
+            sub="Void-Haki online"
+            accent="#a78bfa"
+          />
+        </div>
       </div>
 
       {/* Widgets Grid */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 16,
-        }}
-      >
+      <div className="grid grid-cols-2 gap-5">
         {/* Today's Tasks */}
-        <div
-          style={{
-            background: "#111218",
-            borderRadius: 10,
-            border: "1px solid #1a1b20",
-            overflow: "hidden",
-          }}
-        >
-          <div
-            className="flex justify-between items-center border-b"
-            style={{
-              padding: "12px 16px",
-              borderColor: "#1a1b20",
-            }}
-          >
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#fafafa" }}>
-              Today&apos;s Tasks
-            </span>
-            <Link
-              href="/planner"
-              style={{ fontSize: 10, color: "#52525b" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#71717a")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "#52525b")}
-            >
-              View all →
-            </Link>
-          </div>
+        <WidgetCard title="Today's Tasks" href="/planner" linkText="View all →">
           <TaskList tasks={tasks} onToggle={toggleTask} limit={5} />
-        </div>
+        </WidgetCard>
 
         {/* Inbox Preview */}
-        <div
-          style={{
-            background: "#111218",
-            borderRadius: 10,
-            border: "1px solid #1a1b20",
-            overflow: "hidden",
-          }}
-        >
-          <div
-            className="flex justify-between items-center border-b"
-            style={{
-              padding: "12px 16px",
-              borderColor: "#1a1b20",
-            }}
-          >
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#fafafa" }}>
-              Inbox
-            </span>
-            <Link
-              href="/mail"
-              style={{ fontSize: 10, color: "#52525b" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#71717a")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "#52525b")}
-            >
-              Open mail →
-            </Link>
-          </div>
-          <div style={{ padding: 24, textAlign: "center" }}>
-            <div style={{ fontSize: 24, marginBottom: 8 }}>✉</div>
-            <div style={{ fontSize: 12, color: "#52525b" }}>
-              Email not connected
+        <WidgetCard title="Inbox" href="/mail" linkText="Open mail →">
+          <div className="flex items-center justify-center text-center" style={{ flex: 1, padding: 24 }}>
+            <div>
+              <div className="text-2xl mb-2">✉</div>
+              <div className="text-xs" style={{ color: "var(--void-dim)" }}>
+                Email not connected
+              </div>
+              <Link
+                href="/mail"
+                className="inline-block mt-3 px-3 py-1.5 rounded-md text-[11px] font-semibold no-underline transition-colors"
+                style={{
+                  background: "var(--void-accent)",
+                  color: "var(--void-bg)",
+                }}
+              >
+                Connect Gmail
+              </Link>
             </div>
-            <Link
-              href="/mail"
-              style={{
-                display: "inline-block",
-                marginTop: 12,
-                padding: "6px 12px",
-                borderRadius: 6,
-                background: "#f59e0b",
-                color: "#0c0d10",
-                fontSize: 11,
-                fontWeight: 600,
-                textDecoration: "none",
-              }}
-            >
-              Connect Gmail
-            </Link>
           </div>
-        </div>
+        </WidgetCard>
 
         {/* Recent Notes */}
-        <div
-          style={{
-            background: "#111218",
-            borderRadius: 10,
-            border: "1px solid #1a1b20",
-            overflow: "hidden",
-          }}
-        >
-          <div
-            className="flex justify-between items-center border-b"
-            style={{
-              padding: "12px 16px",
-              borderColor: "#1a1b20",
-            }}
-          >
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#fafafa" }}>
-              Recent Notes
-            </span>
-            <Link
-              href="/vault"
-              style={{ fontSize: 10, color: "#52525b" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#71717a")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "#52525b")}
-            >
-              Browse vault →
-            </Link>
-          </div>
+        <WidgetCard title="Recent Notes" href="/vault" linkText="Browse vault →">
           <VaultRecent files={vaultFiles} limit={4} />
-        </div>
+        </WidgetCard>
 
         {/* Quick Search */}
-        <div
-          style={{
-            background: "#111218",
-            borderRadius: 10,
-            border: "1px solid #1a1b20",
-            overflow: "hidden",
-          }}
-        >
-          <div
-            className="flex justify-between items-center border-b"
-            style={{
-              padding: "12px 16px",
-              borderColor: "#1a1b20",
-            }}
-          >
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#fafafa" }}>
-              Void-Haki
-            </span>
-            <Link
-              href="/research"
-              style={{ fontSize: 10, color: "#52525b" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#71717a")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "#52525b")}
-            >
-              Research →
-            </Link>
-          </div>
-          <div style={{ padding: 16 }}>
-            <div style={{ fontSize: 12, color: "#71717a", marginBottom: 12 }}>
-              Semantic search across your vault
+        <WidgetCard title="Void-Haki" href="/research" linkText="Research →">
+          <div className="flex items-center justify-center" style={{ flex: 1, padding: 24 }}>
+            <div style={{ width: "100%" }}>
+              <div className="text-xs mb-3" style={{ color: "var(--void-muted)" }}>
+                Semantic search across your vault
+              </div>
+              <Link
+                href="/research"
+                className="block rounded-md no-underline text-xs transition-colors"
+                style={{
+                  padding: "10px 12px",
+                  border: "1px solid var(--void-border)",
+                  background: "var(--void-bg)",
+                  color: "var(--void-dim)",
+                }}
+              >
+                Search your vault...
+              </Link>
             </div>
-            <Link
-              href="/research"
-              style={{
-                display: "block",
-                padding: "10px 12px",
-                borderRadius: 6,
-                border: "1px solid #27272a",
-                background: "#18181b",
-                color: "#52525b",
-                fontSize: 12,
-                textDecoration: "none",
-              }}
-            >
-              Search your vault...
-            </Link>
           </div>
-        </div>
+        </WidgetCard>
+      </div>
+    </div>
+  );
+}
+
+function WidgetCard({
+  title,
+  href,
+  linkText,
+  children,
+}: {
+  title: string;
+  href: string;
+  linkText: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="rounded-lg overflow-hidden transition-colors flex flex-col"
+      style={{
+        background: "var(--void-surface)",
+        border: "1px solid var(--void-border)",
+        height: "100%",
+      }}
+    >
+      <div
+        className="flex justify-between items-center border-b"
+        style={{
+          padding: "12px 16px",
+          borderColor: "var(--void-border)",
+          flexShrink: 0,
+        }}
+      >
+        <span
+          className="text-xs font-semibold"
+          style={{ color: "var(--void-white)" }}
+        >
+          {title}
+        </span>
+        <Link
+          href={href}
+          className="text-[10px] transition-colors no-underline"
+          style={{ color: "var(--void-dim)" }}
+        >
+          {linkText}
+        </Link>
+      </div>
+      <div className="flex flex-col" style={{ flex: 1 }}>
+        {children}
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { MainLayout } from "@/components/layout";
+import { LayoutWrapper } from "@/components/layout";
 
 // Configure fonts
 const dmSans = DM_Sans({
@@ -34,7 +34,7 @@ export default function RootLayout({
       <body
         className={`${dmSans.variable} ${jetbrainsMono.variable} antialiased`}
       >
-        <MainLayout>{children}</MainLayout>
+        <LayoutWrapper>{children}</LayoutWrapper>
       </body>
     </html>
   );

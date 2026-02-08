@@ -13,28 +13,20 @@ export default function EmailList({ emails, onEmailClick }: EmailListProps) {
     <div
       className="rounded-lg border overflow-hidden"
       style={{
-        background: "#111218",
-        borderColor: "#1a1b20",
+        background: "var(--void-surface)",
+        borderColor: "var(--void-border)",
       }}
     >
       {emails.map((email) => (
         <div
           key={email.id}
-          className="border-b cursor-pointer transition-colors"
+          className="border-b cursor-pointer void-hover-row"
           style={{
             padding: "14px 16px",
-            borderColor: "#1a1b20",
+            borderColor: "var(--void-border)",
             background: email.read ? "transparent" : "rgba(245, 158, 11, 0.02)",
           }}
           onClick={() => onEmailClick?.(email)}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#1a1b20";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = email.read
-              ? "transparent"
-              : "rgba(245, 158, 11, 0.02)";
-          }}
         >
           <div className="flex items-start justify-between gap-3">
             <div style={{ flex: 1 }}>
@@ -55,7 +47,7 @@ export default function EmailList({ emails, onEmailClick }: EmailListProps) {
                   style={{
                     fontSize: 12.5,
                     fontWeight: email.read ? 400 : 600,
-                    color: email.read ? "#a1a1aa" : "#fafafa",
+                    color: email.read ? "var(--void-muted)" : "var(--void-white)",
                   }}
                 >
                   {email.from}
@@ -67,7 +59,7 @@ export default function EmailList({ emails, onEmailClick }: EmailListProps) {
               <div
                 style={{
                   fontSize: 12.5,
-                  color: email.read ? "#71717a" : "#d4d4d8",
+                  color: email.read ? "var(--void-dim)" : "var(--void-text)",
                   fontWeight: email.read ? 400 : 500,
                   marginBottom: 4,
                 }}
@@ -79,7 +71,7 @@ export default function EmailList({ emails, onEmailClick }: EmailListProps) {
               <div
                 style={{
                   fontSize: 11.5,
-                  color: "#52525b",
+                  color: "var(--void-faint)",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
@@ -93,7 +85,7 @@ export default function EmailList({ emails, onEmailClick }: EmailListProps) {
             <div
               style={{
                 fontSize: 10.5,
-                color: "#52525b",
+                color: "var(--void-faint)",
                 flexShrink: 0,
               }}
             >

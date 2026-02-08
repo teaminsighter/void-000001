@@ -56,10 +56,10 @@ export default function ResearchPage() {
     <div style={{ padding: 24, maxWidth: 900 }}>
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 600, color: "#fafafa" }}>
+        <h1 className="void-heading">
           Research
         </h1>
-        <div style={{ fontSize: 12, color: "#52525b", marginTop: 4 }}>
+        <div className="void-subheading">
           Search your vault with semantic search
         </div>
       </div>
@@ -76,26 +76,22 @@ export default function ResearchPage() {
       >
         {/* Vault Results */}
         <div
-          className="rounded-lg border"
-          style={{
-            background: "#111218",
-            borderColor: "#1a1b20",
-          }}
+          className="void-card"
         >
           <div
             className="border-b"
             style={{
               padding: "12px 16px",
-              borderColor: "#1a1b20",
+              borderColor: "var(--void-border)",
             }}
           >
             <div className="flex items-center gap-2">
               <span style={{ color: "#34d399" }}>◈</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#fafafa" }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--void-white)" }}>
                 Vault (Void-Haki)
               </span>
               {vaultResults.length > 0 && (
-                <span style={{ fontSize: 11, color: "#52525b" }}>
+                <span style={{ fontSize: 11, color: "var(--void-faint)" }}>
                   {vaultResults.length} results
                 </span>
               )}
@@ -107,7 +103,7 @@ export default function ResearchPage() {
                 style={{
                   padding: 24,
                   textAlign: "center",
-                  color: "#52525b",
+                  color: "var(--void-faint)",
                   fontSize: 12,
                 }}
               >
@@ -119,13 +115,13 @@ export default function ResearchPage() {
                   key={i}
                   style={{
                     padding: "12px 16px",
-                    borderBottom: "1px solid #1a1b20",
+                    borderBottom: "1px solid var(--void-border)",
                   }}
                 >
                   <div style={{ fontSize: 11, color: "#34d399", marginBottom: 4 }}>
                     {result.file}
                   </div>
-                  <div style={{ fontSize: 12, color: "#a1a1aa", lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 12, color: "var(--void-muted)", lineHeight: 1.5 }}>
                     {result.entry.substring(0, 200)}...
                   </div>
                 </div>
@@ -136,10 +132,8 @@ export default function ResearchPage() {
 
         {/* Web Results */}
         <div
-          className="rounded-lg border"
+          className="void-card"
           style={{
-            background: "#111218",
-            borderColor: "#1a1b20",
             opacity: 0.6,
           }}
         >
@@ -147,15 +141,15 @@ export default function ResearchPage() {
             className="border-b"
             style={{
               padding: "12px 16px",
-              borderColor: "#1a1b20",
+              borderColor: "var(--void-border)",
             }}
           >
             <div className="flex items-center gap-2">
               <span style={{ color: "#60a5fa" }}>◎</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#fafafa" }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--void-white)" }}>
                 Web Search
               </span>
-              <span style={{ fontSize: 10, color: "#52525b", marginLeft: "auto" }}>
+              <span style={{ fontSize: 10, color: "var(--void-faint)", marginLeft: "auto" }}>
                 Coming soon
               </span>
             </div>
@@ -164,7 +158,7 @@ export default function ResearchPage() {
             style={{
               padding: 24,
               textAlign: "center",
-              color: "#52525b",
+              color: "var(--void-faint)",
               fontSize: 12,
             }}
           >

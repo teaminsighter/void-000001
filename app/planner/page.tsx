@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Task, ScheduleItem } from "@/lib/types";
+import { onDataChanged } from "@/lib/events";
 import { TimeBlocks, TaskManager } from "@/components/planner";
 
 export default function PlannerPage() {
@@ -17,12 +18,7 @@ export default function PlannerPage() {
     day: "numeric",
   });
 
-  // Load data on mount
-  useEffect(() => {
-    loadPlan();
-  }, []);
-
-  const loadPlan = async () => {
+  const loadPlan = useCallback(async () => {
     try {
       const res = await fetch("/api/planner");
       const data = await res.json();
@@ -33,7 +29,19 @@ export default function PlannerPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Load data on mount
+  useEffect(() => {
+    loadPlan();
+  }, [loadPlan]);
+
+  // Auto-refresh when agent modifies tasks via chat
+  useEffect(() => {
+    return onDataChanged(() => {
+      loadPlan();
+    }, 'tasks');
+  }, [loadPlan]);
 
   const toggleTask = async (id: string) => {
     const updated = tasks.map((task) =>
@@ -71,7 +79,7 @@ export default function PlannerPage() {
 
   if (isLoading) {
     return (
-      <div style={{ padding: 24, color: "#52525b" }}>Loading planner...</div>
+      <div style={{ padding: 24, color: "var(--void-faint)" }}>Loading planner...</div>
     );
   }
 
@@ -79,10 +87,10 @@ export default function PlannerPage() {
     <div style={{ padding: 24, maxWidth: 1000 }}>
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 600, color: "#fafafa" }}>
+        <h1 className="void-heading">
           Daily Planner
         </h1>
-        <div style={{ fontSize: 12, color: "#52525b", marginTop: 4 }}>
+        <div className="void-subheading">
           {today}
         </div>
       </div>
@@ -101,26 +109,24 @@ export default function PlannerPage() {
 
       {/* AI Plan Generation */}
       <div
-        className="rounded-lg border"
+        className="void-card"
         style={{
           marginTop: 16,
           padding: 16,
-          background: "#111218",
-          borderColor: "#1a1b20",
         }}
       >
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1">
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#fafafa" }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--void-white)" }}>
               Generate AI Plan
             </div>
-            <div style={{ fontSize: 11, color: "#52525b", marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: "var(--void-faint)", marginTop: 2 }}>
               Let the agent create a time-blocked schedule based on your vault
             </div>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <label style={{ fontSize: 11, color: "#71717a" }}>Hours:</label>
+              <label style={{ fontSize: 11, color: "var(--void-dim)" }}>Hours:</label>
               <input
                 type="number"
                 value={hours}
@@ -131,9 +137,9 @@ export default function PlannerPage() {
                   width: 50,
                   padding: "6px 8px",
                   borderRadius: 4,
-                  border: "1px solid #27272a",
-                  background: "#18181b",
-                  color: "#fafafa",
+                  border: "1px solid var(--void-border)",
+                  background: "var(--void-surface)",
+                  color: "var(--void-white)",
                   fontSize: 12,
                 }}
               />
@@ -146,7 +152,7 @@ export default function PlannerPage() {
                 borderRadius: 6,
                 border: "none",
                 background: isGenerating ? "#52525b" : "#f59e0b",
-                color: "#0c0d10",
+                color: "var(--void-bg)",
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: isGenerating ? "not-allowed" : "pointer",

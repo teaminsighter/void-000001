@@ -21,7 +21,8 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       style={{
         width: collapsed ? 56 : 200,
         minWidth: collapsed ? 56 : 200,
-        background: "#0a0b0e",
+        background: "color-mix(in srgb, var(--void-sidebar-bg) 80%, transparent)",
+        backdropFilter: "blur(20px) saturate(180%)",
         borderColor: "var(--void-border)",
       }}
     >
@@ -49,7 +50,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {!collapsed && (
           <span
             className="text-sm font-bold"
-            style={{ color: "#fafafa", letterSpacing: -0.3 }}
+            style={{ color: "var(--void-white)", letterSpacing: -0.3 }}
           >
             Void
           </span>
@@ -66,11 +67,11 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               key={page.id}
               href={page.path}
               prefetch={true}
-              className={`flex items-center gap-2.5 rounded-md mb-0.5 transition-colors ${
+              className={`flex items-center gap-2.5 rounded-lg mb-0.5 transition-colors ${
                 isActive ? "nav-link-active" : "nav-link"
               }`}
               style={{
-                padding: collapsed ? "9px 0" : "9px 10px",
+                padding: collapsed ? "10px 0" : "10px 12px",
                 justifyContent: collapsed ? "center" : "flex-start",
               }}
             >
@@ -79,7 +80,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 style={{
                   width: 24,
                   textAlign: "center",
-                  color: isActive ? "#f59e0b" : "#52525b",
+                  color: isActive ? "var(--void-accent)" : "var(--void-dim)",
                 }}
               >
                 {page.icon}
@@ -89,7 +90,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   className="text-xs"
                   style={{
                     fontWeight: isActive ? 600 : 400,
-                    color: isActive ? "#fafafa" : "#71717a",
+                    color: isActive ? "var(--void-white)" : "var(--void-muted)",
                   }}
                 >
                   {page.label}
@@ -135,10 +136,10 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 width: 7,
                 height: 7,
                 borderRadius: "50%",
-                background: "#22c55e",
+                background: "var(--status-ok)",
               }}
             />
-            <span style={{ fontSize: 10, color: "#52525b" }}>
+            <span style={{ fontSize: 10, color: "var(--void-dim)" }}>
               All systems healthy
             </span>
           </div>
@@ -149,7 +150,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           className="flex items-center gap-2 rounded-md"
           style={{
             padding: "6px 8px",
-            background: "rgba(255, 255, 255, 0.02)",
+            background: "rgba(128, 128, 128, 0.05)",
             justifyContent: collapsed ? "center" : "flex-start",
           }}
         >
@@ -160,17 +161,17 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               height: 24,
               borderRadius: 6,
               background: "rgba(245, 158, 11, 0.12)",
-              color: "#f59e0b",
+              color: "var(--void-accent)",
             }}
           >
             U
           </div>
           {!collapsed && (
             <div>
-              <div style={{ fontSize: 11, color: "#d4d4d8", fontWeight: 500 }}>
+              <div style={{ fontSize: 11, color: "var(--void-text)", fontWeight: 500 }}>
                 User
               </div>
-              <div style={{ fontSize: 9, color: "#3f3f46" }}>Dhaka, BD</div>
+              <div style={{ fontSize: 9, color: "var(--void-faint)" }}>Dhaka, BD</div>
             </div>
           )}
         </div>

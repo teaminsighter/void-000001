@@ -28,7 +28,7 @@
     {
       "parameters": {
         "operation": "read",
-        "filePath": "/vault/07-Agent-Memory/priorities.md",
+        "filePath": "/vault/07-Agent-Memory/goals.md",
         "options": {}
       },
       "id": "read-priorities",

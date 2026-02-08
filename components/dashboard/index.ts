@@ -4,3 +4,4 @@ export { default as EmailPreview } from "./EmailPreview";
 export { default as VaultRecent } from "./VaultRecent";
 export { default as PipelineMini } from "./PipelineMini";
 export { default as QuickActions } from "./QuickActions";
+export { default as HomeRightPanel } from "./HomeRightPanel";
