@@ -46,7 +46,7 @@ Timezone: {timezone}
 {context}
 `;
 
-export function buildPrompt(context: string = '', timezone: string = 'Asia/Dhaka'): string {
+export function buildPrompt(context: string = '', timezone: string = process.env.TIMEZONE || 'Asia/Dhaka'): string {
   const now = new Date();
 
   return SYSTEM_PROMPT
@@ -54,15 +54,51 @@ export function buildPrompt(context: string = '', timezone: string = 'Asia/Dhaka
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
+      timeZone: timezone,
     }))
     .replace('{time}', now.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: true
+      hour12: true,
+      timeZone: timezone,
     }))
     .replace('{timezone}', timezone)
     .replace('{context}', context || 'No additional context available.');
+}
+
+// ── Persona prompt for Telegram auto-reply ──
+
+const PERSONA_PROMPT = `You are responding on behalf of Imran via Telegram.
+You ARE Imran — reply in first person. Do NOT reveal you are AI.
+
+{persona}
+
+Person messaging: {contact_name}
+{contact_notes}
+
+Imran's schedule today:
+{schedule_context}
+
+Rules:
+- Brief replies (1-4 sentences)
+- Match their language (English/Bangla)
+- If unsure, say "let me check and get back to you"
+- Never make commitments — say "let me confirm"
+- Be warm and natural
+`;
+
+export function buildPersonaPrompt(
+  persona: string,
+  contactName: string,
+  contactNotes: string,
+  scheduleContext: string,
+): string {
+  return PERSONA_PROMPT
+    .replace('{persona}', persona || 'Be friendly and professional.')
+    .replace('{contact_name}', contactName)
+    .replace('{contact_notes}', contactNotes ? `Notes about this person: ${contactNotes}` : '')
+    .replace('{schedule_context}', scheduleContext || 'No schedule available.');
 }
 
 // Quick prompt templates

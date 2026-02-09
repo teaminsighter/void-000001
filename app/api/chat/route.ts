@@ -5,6 +5,8 @@ import { buildPrompt } from '@/lib/prompts';
 import { appendToLog, writeFile, readFile, listFiles, moveFile, softDelete, listVersions, restoreVersion } from '@/lib/vault';
 import { triggerWorkflow } from '@/lib/n8n';
 import { VOID_TOOLS } from '@/lib/tools';
+import { sendTelegramMessage } from '@/lib/telegram';
+import { getContactByName, listContacts, getMessages as getDbMessages, addMessage as addDbMessage, createConversation, getConversation } from '@/lib/db';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -354,6 +356,41 @@ Be realistic with time blocks. Include breaks.`;
             : `CRM failed: ${result.error || 'unknown error'}`,
           success: result.success,
         };
+      }
+
+      // ── Telegram Tools ──────────────
+      case 'telegram_send': {
+        const contact = getContactByName(input.contact_name as string);
+        if (!contact) return { result: `No contact found matching "${input.contact_name}"`, success: false };
+        const convId = `tg-${contact.telegram_id}`;
+        if (!getConversation(convId)) createConversation(convId, `${contact.display_name} (Telegram)`);
+        const sent = await sendTelegramMessage(contact.telegram_id, input.message as string);
+        if (sent) {
+          addDbMessage(convId, { id: `tg-${Date.now()}-out`, role: 'assistant', content: input.message as string });
+        }
+        return { result: sent ? `Message sent to ${contact.display_name}` : 'Failed to send message', success: sent };
+      }
+      case 'telegram_contacts': {
+        const action = input.action as string;
+        if (action === 'search' && input.query) {
+          const contact = getContactByName(input.query as string);
+          return { result: contact ? `Found: ${contact.display_name} (@${contact.username || 'no username'})` : `No contact matching "${input.query}"`, success: true };
+        }
+        const contacts = listContacts();
+        if (!contacts.length) return { result: 'No Telegram contacts yet.', success: true };
+        const list = contacts.map(c => `- ${c.display_name}${c.username ? ` (@${c.username})` : ''}`).join('\n');
+        return { result: `${contacts.length} contact(s):\n${list}`, success: true };
+      }
+      case 'telegram_history': {
+        const contact = getContactByName(input.contact_name as string);
+        if (!contact) return { result: `No contact found matching "${input.contact_name}"`, success: false };
+        const convId = `tg-${contact.telegram_id}`;
+        const messages = getDbMessages(convId);
+        const limit = (input.limit as number) || 10;
+        const recent = messages.slice(-limit);
+        if (!recent.length) return { result: `No conversation history with ${contact.display_name}`, success: true };
+        const history = recent.map(m => `[${m.role}] ${m.content}`).join('\n');
+        return { result: `Last ${recent.length} messages with ${contact.display_name}:\n${history}`, success: true };
       }
 
       default:

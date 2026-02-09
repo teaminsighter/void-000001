@@ -67,6 +67,22 @@ export async function sendTelegramMessage(chatId: string, text: string): Promise
 }
 
 /**
+ * Send "typing..." indicator so the user sees the bot is working
+ */
+export async function sendTypingAction(chatId: string): Promise<void> {
+  if (!BOT_TOKEN) return;
+  try {
+    await fetch(`${TELEGRAM_API}/sendChatAction`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, action: 'typing' }),
+    });
+  } catch {
+    // non-critical, ignore
+  }
+}
+
+/**
  * Download a file from Telegram (e.g., photos)
  */
 export async function downloadTelegramFile(fileId: string): Promise<Buffer | null> {
@@ -117,11 +133,16 @@ export async function setWebhook(url: string): Promise<{ success: boolean; messa
 }
 
 /**
- * Verify that a Telegram update comes from the expected chat
+ * Check if a Telegram chat ID belongs to the owner
  */
-export function verifyTelegramUpdate(chatId: string | number): boolean {
+export function isOwnerChat(chatId: string | number): boolean {
   if (!CHAT_ID) return true; // No restriction if not configured
   return String(chatId) === String(CHAT_ID);
+}
+
+/** @deprecated Use isOwnerChat instead */
+export function verifyTelegramUpdate(chatId: string | number): boolean {
+  return isOwnerChat(chatId);
 }
 
 export { BOT_TOKEN, CHAT_ID };

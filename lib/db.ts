@@ -45,6 +45,17 @@ function getDb(): Database.Database {
 
     CREATE INDEX IF NOT EXISTS idx_messages_conversation
       ON messages(conversation_id, created_at ASC);
+
+    CREATE TABLE IF NOT EXISTS telegram_contacts (
+      telegram_id   TEXT PRIMARY KEY,
+      username      TEXT,
+      first_name    TEXT,
+      last_name     TEXT,
+      display_name  TEXT NOT NULL,
+      notes         TEXT DEFAULT '',
+      created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   return db;
@@ -123,4 +134,73 @@ export function getMessages(conversationId: string) {
     content: string;
     created_at: string;
   }[];
+}
+
+// ── Telegram Contacts ─────────────────
+
+export interface TelegramContact {
+  telegram_id: string;
+  username: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  display_name: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export function upsertContact(contact: {
+  telegram_id: string;
+  username?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  display_name: string;
+}) {
+  const stmt = getDb().prepare(`
+    INSERT INTO telegram_contacts (telegram_id, username, first_name, last_name, display_name)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(telegram_id) DO UPDATE SET
+      username = excluded.username,
+      first_name = excluded.first_name,
+      last_name = excluded.last_name,
+      updated_at = datetime('now')
+  `);
+  stmt.run(
+    contact.telegram_id,
+    contact.username ?? null,
+    contact.first_name ?? null,
+    contact.last_name ?? null,
+    contact.display_name,
+  );
+}
+
+export function getContactByName(name: string): TelegramContact | undefined {
+  const stmt = getDb().prepare(`
+    SELECT * FROM telegram_contacts
+    WHERE display_name LIKE ? OR first_name LIKE ? OR username LIKE ?
+    LIMIT 1
+  `);
+  const pattern = `%${name}%`;
+  return stmt.get(pattern, pattern, pattern) as TelegramContact | undefined;
+}
+
+export function listContacts(): TelegramContact[] {
+  const stmt = getDb().prepare(
+    "SELECT * FROM telegram_contacts ORDER BY updated_at DESC"
+  );
+  return stmt.all() as TelegramContact[];
+}
+
+export function updateContactNotes(telegram_id: string, notes: string) {
+  const stmt = getDb().prepare(
+    "UPDATE telegram_contacts SET notes = ?, updated_at = datetime('now') WHERE telegram_id = ?"
+  );
+  stmt.run(notes, telegram_id);
+}
+
+export function getContactByTelegramId(telegram_id: string): TelegramContact | undefined {
+  const stmt = getDb().prepare(
+    "SELECT * FROM telegram_contacts WHERE telegram_id = ?"
+  );
+  return stmt.get(telegram_id) as TelegramContact | undefined;
 }

@@ -395,4 +395,61 @@ export const VOID_TOOLS: Tool[] = [
       required: ['action'],
     },
   },
+
+  // ── Telegram Messaging ──────────────
+  {
+    name: 'telegram_send',
+    description: 'Send a Telegram message to a saved contact by name. Use when the user wants to message someone on Telegram.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        contact_name: {
+          type: 'string',
+          description: 'Name of the contact to send to (matches display_name, first_name, or username)',
+        },
+        message: {
+          type: 'string',
+          description: 'The message text to send',
+        },
+      },
+      required: ['contact_name', 'message'],
+    },
+  },
+  {
+    name: 'telegram_contacts',
+    description: 'List or search Telegram contacts. Use when the user wants to see who they can message on Telegram.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['list', 'search'],
+          description: 'Whether to list all contacts or search by name',
+        },
+        query: {
+          type: 'string',
+          description: 'Search query (for action "search")',
+        },
+      },
+      required: ['action'],
+    },
+  },
+  {
+    name: 'telegram_history',
+    description: 'Read recent conversation history with a Telegram contact. Use when the user wants to see past messages with someone.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        contact_name: {
+          type: 'string',
+          description: 'Name of the contact to look up history for',
+        },
+        limit: {
+          type: 'number',
+          description: 'Number of recent messages to return (default: 10)',
+        },
+      },
+      required: ['contact_name'],
+    },
+  },
 ];
