@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { registerSlashCommand, DISCORD_APPLICATION_ID } from '@/lib/discord';
 
-export async function POST() {
+export { handler as GET, handler as POST };
+
+async function handler() {
   // Register the /void slash command globally
   const result = await registerSlashCommand(
     'void',
