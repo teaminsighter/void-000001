@@ -56,6 +56,17 @@ function getDb(): Database.Database {
       created_at    TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS discord_contacts (
+      discord_id    TEXT PRIMARY KEY,
+      username      TEXT,
+      global_name   TEXT,
+      display_name  TEXT NOT NULL,
+      dm_channel_id TEXT,
+      notes         TEXT DEFAULT '',
+      created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   return db;
@@ -203,4 +214,73 @@ export function getContactByTelegramId(telegram_id: string): TelegramContact | u
     "SELECT * FROM telegram_contacts WHERE telegram_id = ?"
   );
   return stmt.get(telegram_id) as TelegramContact | undefined;
+}
+
+// ── Discord Contacts ──────────────────
+
+export interface DiscordContact {
+  discord_id: string;
+  username: string | null;
+  global_name: string | null;
+  display_name: string;
+  dm_channel_id: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export function upsertDiscordContact(contact: {
+  discord_id: string;
+  username?: string | null;
+  global_name?: string | null;
+  display_name: string;
+  dm_channel_id?: string | null;
+}) {
+  const stmt = getDb().prepare(`
+    INSERT INTO discord_contacts (discord_id, username, global_name, display_name, dm_channel_id)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(discord_id) DO UPDATE SET
+      username = excluded.username,
+      global_name = excluded.global_name,
+      dm_channel_id = COALESCE(excluded.dm_channel_id, discord_contacts.dm_channel_id),
+      updated_at = datetime('now')
+  `);
+  stmt.run(
+    contact.discord_id,
+    contact.username ?? null,
+    contact.global_name ?? null,
+    contact.display_name,
+    contact.dm_channel_id ?? null,
+  );
+}
+
+export function getDiscordContactByName(name: string): DiscordContact | undefined {
+  const stmt = getDb().prepare(`
+    SELECT * FROM discord_contacts
+    WHERE display_name LIKE ? OR global_name LIKE ? OR username LIKE ?
+    LIMIT 1
+  `);
+  const pattern = `%${name}%`;
+  return stmt.get(pattern, pattern, pattern) as DiscordContact | undefined;
+}
+
+export function listDiscordContacts(): DiscordContact[] {
+  const stmt = getDb().prepare(
+    "SELECT * FROM discord_contacts ORDER BY updated_at DESC"
+  );
+  return stmt.all() as DiscordContact[];
+}
+
+export function updateDiscordContactNotes(discord_id: string, notes: string) {
+  const stmt = getDb().prepare(
+    "UPDATE discord_contacts SET notes = ?, updated_at = datetime('now') WHERE discord_id = ?"
+  );
+  stmt.run(notes, discord_id);
+}
+
+export function getDiscordContactById(discord_id: string): DiscordContact | undefined {
+  const stmt = getDb().prepare(
+    "SELECT * FROM discord_contacts WHERE discord_id = ?"
+  );
+  return stmt.get(discord_id) as DiscordContact | undefined;
 }

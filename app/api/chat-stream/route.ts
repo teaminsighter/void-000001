@@ -6,7 +6,8 @@ import { appendToLog, writeFile, readFile, listFiles, moveFile, softDelete, list
 import { triggerWorkflow } from '@/lib/n8n';
 import { VOID_TOOLS } from '@/lib/tools';
 import { sendTelegramMessage } from '@/lib/telegram';
-import { getContactByName, listContacts, getMessages as getDbMessages, addMessage as addDbMessage, createConversation, getConversation } from '@/lib/db';
+import { sendDiscordDM } from '@/lib/discord';
+import { getContactByName, listContacts, getMessages as getDbMessages, addMessage as addDbMessage, createConversation, getConversation, getDiscordContactByName, listDiscordContacts } from '@/lib/db';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -259,6 +260,39 @@ async function executeTool(
         const contact = getContactByName(input.contact_name as string);
         if (!contact) return { result: `No contact found matching "${input.contact_name}"`, success: false };
         const convId = `tg-${contact.telegram_id}`;
+        const messages = getDbMessages(convId);
+        const limit = (input.limit as number) || 10;
+        const recent = messages.slice(-limit);
+        if (!recent.length) return { result: `No conversation history with ${contact.display_name}`, success: true };
+        const history = recent.map(m => `[${m.role}] ${m.content}`).join('\n');
+        return { result: `Last ${recent.length} messages with ${contact.display_name}:\n${history}`, success: true };
+      }
+
+      // ── Discord Tools ──────────────
+      case 'discord_send': {
+        const contact = getDiscordContactByName(input.contact_name as string);
+        if (!contact) return { result: `No Discord contact matching "${input.contact_name}"`, success: false };
+        const convId = `dc-${contact.discord_id}`;
+        if (!getConversation(convId)) createConversation(convId, `${contact.display_name} (Discord)`);
+        const sent = await sendDiscordDM(contact.discord_id, input.message as string);
+        if (sent) addDbMessage(convId, { id: `dc-${Date.now()}-out`, role: 'assistant', content: input.message as string });
+        return { result: sent ? `Sent to ${contact.display_name}` : 'Failed to send', success: sent };
+      }
+      case 'discord_contacts': {
+        const action = input.action as string;
+        if (action === 'search' && input.query) {
+          const contact = getDiscordContactByName(input.query as string);
+          return { result: contact ? `Found: ${contact.display_name} (@${contact.username || 'no username'})` : `No Discord contact matching "${input.query}"`, success: true };
+        }
+        const contacts = listDiscordContacts();
+        if (!contacts.length) return { result: 'No Discord contacts yet.', success: true };
+        const list = contacts.map(c => `- ${c.display_name}${c.username ? ` (@${c.username})` : ''}`).join('\n');
+        return { result: `${contacts.length} Discord contact(s):\n${list}`, success: true };
+      }
+      case 'discord_history': {
+        const contact = getDiscordContactByName(input.contact_name as string);
+        if (!contact) return { result: `No Discord contact matching "${input.contact_name}"`, success: false };
+        const convId = `dc-${contact.discord_id}`;
         const messages = getDbMessages(convId);
         const limit = (input.limit as number) || 10;
         const recent = messages.slice(-limit);

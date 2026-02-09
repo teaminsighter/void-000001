@@ -452,4 +452,61 @@ export const VOID_TOOLS: Tool[] = [
       required: ['contact_name'],
     },
   },
+
+  // ── Discord Messaging ───────────────
+  {
+    name: 'discord_send',
+    description: 'Send a Discord DM to a saved contact by name. Use when the user wants to message someone on Discord.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        contact_name: {
+          type: 'string',
+          description: 'Name of the Discord contact to send to',
+        },
+        message: {
+          type: 'string',
+          description: 'The message text to send',
+        },
+      },
+      required: ['contact_name', 'message'],
+    },
+  },
+  {
+    name: 'discord_contacts',
+    description: 'List or search Discord contacts. Use when the user wants to see who they can message on Discord.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['list', 'search'],
+          description: 'Whether to list all contacts or search by name',
+        },
+        query: {
+          type: 'string',
+          description: 'Search query (for action "search")',
+        },
+      },
+      required: ['action'],
+    },
+  },
+  {
+    name: 'discord_history',
+    description: 'Read recent conversation history with a Discord contact. Use when the user wants to see past messages with someone on Discord.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        contact_name: {
+          type: 'string',
+          description: 'Name of the Discord contact to look up history for',
+        },
+        limit: {
+          type: 'number',
+          description: 'Number of recent messages to return (default: 10)',
+        },
+      },
+      required: ['contact_name'],
+    },
+  },
 ];
