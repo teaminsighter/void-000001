@@ -24,6 +24,7 @@ export default function ChatPanel({
   const [isLoading, setIsLoading] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const activeConvRef = useRef<string | null>(null);
 
   // Auto-scroll to bottom
@@ -284,6 +285,7 @@ export default function ChatPanel({
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      setTimeout(() => inputRef.current?.focus(), 0);
     }
   };
 
@@ -487,11 +489,13 @@ export default function ChatPanel({
             disabled={isLoading}
           />
           <input
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Tell your agent what to do..."
             disabled={isLoading}
+            autoFocus
             className="flex-1 outline-none"
             style={{
               padding: "10px 14px",
