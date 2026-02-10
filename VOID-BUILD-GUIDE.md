@@ -1,47 +1,43 @@
 # VOID — Complete Build Guide
 
-> **One document. Everything you need. Open this in VS Code alongside Claude Code and build.**
+> **The single reference document for understanding and working on VOID.**
 
 ---
 
-## What is Void?
+## What is VOID?
 
-Void is your personal AI-powered operating system — a single web dashboard where you talk to an AI agent in natural language, and it plans your day, checks your email, searches your notes, manages your CRM pipeline, sets reminders, logs your thoughts, and runs automated bots. Everything saves to your markdown vault. Everything is searchable by meaning.
+VOID is a personal AI operating system — a web dashboard where you talk to a Claude-powered agent in natural language. It plans your day, manages notes, searches your knowledge vault by meaning, handles file attachments (images/PDFs), speaks aloud, manages email, and runs automated workflows. Accessible via browser, Telegram, and Discord.
 
-**Name:** Void
-**Stack:** Next.js 16 + Tailwind CSS v4 + Claude API + n8n + Khoj + PostgreSQL
-**Hosting:** Hostinger VPS (Ubuntu 24.04) + Coolify
+**Stack:** Next.js 16 + Tailwind CSS v4 + Claude API + SQLite + Khoj + n8n
+**Hosting:** Hostinger VPS (Ubuntu) + Coolify
 **URL:** void.insighter.digital
+**Platforms:** Web | Telegram (bot) | Discord (/void slash command)
 
 ---
 
-## Architecture Overview
+## Architecture
 
 ```
-Browser (you)
-    ↓ HTTPS
+Browser (you)     Telegram (mobile)     Discord (/void)
+    ↓ HTTPS           ↓ Telegram API        ↓ HTTP Interactions
 Coolify Reverse Proxy (:443) — auto SSL, routes by subdomain
     ↓ HTTP internal
-Void Dashboard (:3000) — Next.js 16, hides API keys, proxies everything
-    ↓ HTTPS              ↓ HTTP internal
-Claude API             n8n (:5678) webhooks
-  (thinks)               (complex integrations only)
-                          ↓ HTTPS              ↓ Filesystem
-                       Gmail/Telegram/CRM    /opt/void-vault
-                                               (permanent storage)
-                                                ↓ read-only mount
-                                             Khoj (:42110)
-                                                ↓ SQL
-                                             pgvector DB (embeddings)
+Void Dashboard (:3000) — Next.js 16, hides API keys
+    ├── Claude API (reasoning + 30 tools)
+    ├── Vault filesystem (/opt/void-vault — direct read/write)
+    ├── SQLite DB (/app/data/void.db — conversations + contacts + emails)
+    ├── Khoj (:42110 — semantic search + RAG)
+    ├── n8n (:5678 — Gmail triage, reminders, scheduled workflows)
+    └── ElevenLabs (TTS) / Web Speech API (STT)
 ```
 
-**Rules:**
+**Key rules:**
 - Dashboard hides all secrets — browser never sees API keys
-- Claude only thinks, never acts directly
-- Core actions (log, memory, save) bypass n8n and write directly to vault filesystem
-- n8n handles complex integrations (email, reminders, CRM, scheduled plans)
-- Vault is permanent markdown storage
-- Khoj makes vault searchable via embeddings
+- Claude reasons + calls tools, dashboard executes them
+- Core vault operations are direct filesystem — no n8n needed
+- n8n only for complex integrations (email, CRM, scheduled workflows)
+- Vault is permanent markdown storage with auto-versioning
+- Khoj makes vault searchable via embeddings, with local search fallback
 
 ---
 
@@ -54,110 +50,213 @@ Claude API             n8n (:5678) webhooks
 | **Tailwind CSS** | v4 | Styling (CSS-first config) |
 | **TypeScript** | 5.x | Type safety |
 | **Anthropic SDK** | 0.72.1 | Claude API client |
+| **better-sqlite3** | latest | Conversation persistence |
+| **pdf-parse** | latest | PDF text extraction |
+| **jose** | latest | JWT auth (signing + verification) |
 | **n8n** | latest | Automation engine (Docker) |
 | **Khoj** | latest | Vector search + semantic memory (Docker) |
-| **PostgreSQL** | 16 + pgvector | n8n data + Khoj embeddings |
-| **Coolify** | latest | Deployment platform (pre-installed on Hostinger) |
+| **PostgreSQL** | 16 + pgvector | Khoj embeddings + n8n data |
+| **Coolify** | latest | Deployment platform on Hostinger VPS |
 | **Node.js** | 20 LTS | Runtime |
 
 ---
 
-## Project Folder Structure
+## Project Folder Structure (Current)
 
 ```
 void-000001/
-├── .env.local                    # All secrets (NEVER commit)
-├── .env.example                  # Template without real values (commit this)
+├── .env.local                      # Secrets (NEVER commit)
+├── .env.example                    # Template for secrets
 ├── .gitignore
 ├── package.json
-├── postcss.config.mjs
+├── next.config.ts                  # serverExternalPackages: better-sqlite3, pdf-parse
+├── middleware.ts                   # JWT auth guard (PUBLIC_PATHS whitelist)
 ├── tsconfig.json
+├── postcss.config.mjs
 │
-├── app/                          # Next.js App Router
-│   ├── layout.tsx                # Root layout — fonts, metadata
-│   ├── page.tsx                  # Home page (dashboard overview)
-│   ├── globals.css               # Tailwind v4 + custom CSS vars
-│   ├── agent/page.tsx            # Agent chat page
-│   ├── planner/page.tsx          # Daily planner page
-│   ├── vault/page.tsx            # Vault browser page
-│   ├── mail/page.tsx             # Email inbox page
-│   ├── research/page.tsx         # Research page
-│   ├── saved/page.tsx            # Saved items page
-│   ├── bots/page.tsx             # Bot status page
-│   ├── practice/page.tsx         # Practice page
+├── app/                            # === NEXT.JS PAGES ===
+│   ├── layout.tsx                  # Root layout (fonts, theme)
+│   ├── globals.css                 # Tailwind v4 + custom styles
+│   ├── page.tsx                    # Home dashboard (/)
+│   ├── agent/page.tsx              # AI chat (/agent)
+│   ├── planner/page.tsx            # Daily planner (/planner)
+│   ├── vault/page.tsx              # Vault browser (/vault)
+│   ├── mail/page.tsx               # Email inbox (/mail)
+│   ├── research/page.tsx           # Research (/research)
+│   ├── saved/page.tsx              # Saved items (/saved)
+│   ├── bots/page.tsx               # Bot status (/bots)
+│   ├── practice/page.tsx           # Voice practice (/practice)
+│   ├── login/page.tsx              # Password login (/login)
 │   │
-│   └── api/                      # Server-side API routes
-│       ├── chat/route.ts         # POST → Claude API + direct vault actions
-│       ├── search/route.ts       # POST → Khoj search
-│       ├── health/route.ts       # GET → health check
-│       ├── planner/route.ts      # GET/POST → planner data
-│       ├── speech/route.ts       # POST → ElevenLabs TTS
-│       ├── practice/route.ts     # POST → practice mode
-│       ├── action/
-│       │   ├── log/route.ts      # Writes directly to vault
-│       │   ├── memory/route.ts   # Writes directly to vault
-│       │   ├── plan/route.ts     # POST → n8n webhook
-│       │   ├── email/route.ts    # POST → n8n webhook
-│       │   ├── remind/route.ts   # POST → n8n webhook
-│       │   └── crm/route.ts      # POST → n8n webhook
-│       └── vault/
-│           ├── list/route.ts     # GET → list vault files
-│           ├── read/route.ts     # POST → read vault file
-│           └── write/route.ts    # POST → write vault file
+│   └── api/                        # === BACKEND API ROUTES ===
+│       ├── chat/route.ts           # POST → Claude + 21 tools (non-streaming)
+│       ├── chat-stream/route.ts    # POST → SSE streaming chat (same tools)
+│       ├── upload/route.ts         # POST → file upload (image/PDF)
+│       ├── auth/
+│       │   ├── login/route.ts      # POST → JWT login
+│       │   └── logout/route.ts     # POST → clear JWT cookie
+│       ├── conversations/
+│       │   ├── route.ts            # GET/POST → list/create conversations
+│       │   └── [id]/
+│       │       ├── route.ts        # GET/DELETE → get/delete conversation
+│       │       └── messages/route.ts # GET → messages for conversation
+│       ├── telegram/
+│       │   ├── webhook/route.ts    # POST → Telegram bot (owner agent + auto-reply)
+│       │   └── setup/route.ts      # POST → register Telegram webhook
+│       ├── discord/
+│       │   ├── interactions/route.ts # POST → Discord slash command handler
+│       │   └── setup/route.ts      # GET/POST → register /void slash command
+│       ├── gmail/
+│       │   ├── triage/route.ts     # POST → receives classified emails from n8n
+│       │   └── stats/route.ts      # GET → email statistics for reports
+│       ├── contacts/route.ts       # GET → list Telegram + Discord contacts
+│       ├── health/route.ts         # GET → health check
+│       ├── planner/route.ts        # GET/POST → today's tasks
+│       ├── speech/route.ts         # POST → ElevenLabs TTS
+│       ├── search/route.ts         # POST → Khoj search
+│       ├── practice/route.ts       # POST → practice mode
+│       ├── vault/
+│       │   ├── list/route.ts       # GET → list vault files
+│       │   ├── read/route.ts       # POST → read vault file
+│       │   └── write/route.ts      # POST → write vault file
+│       └── action/                 # n8n-proxied actions
+│           ├── log/route.ts        # POST → daily note (direct)
+│           ├── memory/route.ts     # POST → agent memory (direct)
+│           ├── plan/route.ts       # POST → n8n /webhook/plan
+│           ├── email/route.ts      # POST → n8n /webhook/email
+│           ├── remind/route.ts     # POST → n8n /webhook/remind
+│           └── crm/route.ts        # POST → n8n /webhook/crm
 │
 ├── components/
-│   ├── layout/                   # Sidebar, Topbar, MainLayout, CommandPalette
-│   ├── chat/                     # ChatPanel, ChatMessage, QuickPrompts
-│   ├── dashboard/                # StatCard, TaskList, VaultRecent, QuickActions
-│   └── ui/                       # Pill, Badge, Button
+│   ├── layout/                     # App shell
+│   │   ├── MainLayout.tsx          # Sidebar + content area
+│   │   ├── LayoutWrapper.tsx       # Client wrapper for layout
+│   │   ├── Sidebar.tsx             # Navigation sidebar
+│   │   ├── Topbar.tsx              # Top bar (breadcrumb, actions)
+│   │   └── CommandPalette.tsx      # ⌘K command palette
+│   ├── chat/                       # Chat UI
+│   │   ├── ChatPanel.tsx           # Full chat (streaming, attachments, voice)
+│   │   ├── ChatMessage.tsx         # Message bubble (markdown, TTS, attachments)
+│   │   ├── ToolActions.tsx         # Tool execution badges
+│   │   ├── QuickPrompts.tsx        # Suggested prompts
+│   │   ├── FileUpload.tsx          # Drag-drop file upload
+│   │   ├── VoiceButton.tsx         # Hold-to-talk STT mic button
+│   │   └── SpeakButton.tsx         # TTS play button on messages
+│   ├── dashboard/                  # Home page widgets
+│   │   ├── StatCard.tsx, TaskList.tsx, VaultRecent.tsx
+│   │   ├── EmailPreview.tsx, PipelineMini.tsx
+│   │   ├── HomeRightPanel.tsx, QuickActions.tsx
+│   ├── agent/                      # Agent page
+│   │   └── AgentRightPanel.tsx
+│   ├── ui/                         # Shared UI primitives
+│   │   ├── Button.tsx, Badge.tsx, Pill.tsx
+│   ├── vault/                      # Vault browser
+│   │   ├── FileTable.tsx, FolderFilter.tsx, VaultSearch.tsx
+│   ├── planner/                    # Planner page
+│   │   ├── TaskManager.tsx, TimeBlocks.tsx
+│   ├── research/, mail/, saved/, bots/
 │
-├── lib/                          # Utilities
-│   ├── anthropic.ts              # Claude API wrapper
-│   ├── vault.ts                  # Vault file operations
-│   ├── prompts.ts                # AI system prompts + action parsing
-│   ├── khoj.ts                   # Khoj search API
-│   ├── n8n.ts                    # n8n webhook caller
-│   ├── types.ts                  # TypeScript types
-│   └── mock-data.ts              # Mock data fallbacks
+├── lib/                            # === CORE LIBRARIES ===
+│   ├── anthropic.ts                # Claude API: chat(), chatWithTools(), streamChatWithTools()
+│   ├── vault.ts                    # Vault: read/write/list/move/delete + versioning
+│   ├── tools.ts                    # 30 tool schemas for Claude function calling
+│   ├── prompts.ts                  # System prompt builder + persona prompt
+│   ├── khoj.ts                     # Khoj search + RAG: searchWithKhoj(), khojChat()
+│   ├── db.ts                       # SQLite: conversations + messages + contacts + emails
+│   ├── auth.ts                     # JWT: signToken(), verifyToken()
+│   ├── uploads.ts                  # File upload: saveUpload(), cleanOldUploads()
+│   ├── telegram.ts                 # Telegram Bot API helpers
+│   ├── discord.ts                  # Discord API helpers (ed25519 signature, DMs)
+│   ├── gmail.ts                    # Gmail helpers (n8n webhook callers + vault storage)
+│   ├── events.ts                   # Event bus: emitDataChanged()
+│   ├── types.ts                    # TypeScript types
+│   ├── n8n.ts                      # n8n webhook caller
+│   └── mock-data.ts                # Mock data fallbacks
 │
-├── hooks/                        # Custom React hooks
-│   ├── useChat.ts
-│   ├── useTasks.ts
-│   └── useKeyboard.ts
+├── hooks/                          # React hooks
+│   ├── useChat.ts, useTasks.ts, useKeyboard.ts, useTheme.ts
 │
-├── docker/                       # Docker configs for VPS services
-│   ├── docker-compose.yml
-│   ├── docker-compose.n8n.yml
-│   ├── docker-compose.khoj.yml
-│   └── Dockerfile
+├── docker/                         # Docker configs for VPS
+│   ├── Dockerfile                  # Dashboard multi-stage build
+│   ├── docker-compose.yml          # Main orchestrator (includes khoj + n8n)
+│   ├── docker-compose.khoj.yml     # Khoj + pgvector + SearXNG
+│   ├── docker-compose.n8n.yml      # n8n + PostgreSQL
+│   └── .env                        # Production env vars template
 │
-├── vault-template/               # Vault starter structure
-│   ├── 00-Inbox/ ... 06-Reviews/
-│   ├── 07-Agent-Memory/          # Agent persistent memory
-│   └── 99-System/templates/      # Note templates
+├── vault-template/                 # Vault starter structure
+│   ├── 00-Inbox/ through 06-Reviews/
+│   ├── 07-Agent-Memory/            # goals.md, preferences.md, agent-context.md
+│   └── 99-System/templates/daily.md
 │
-├── n8n-workflows/                # Exported n8n workflow JSON files
-├── scripts/                      # Docker management scripts
-└── docs/                         # Documentation
+├── n8n-workflows/                  # 15 exported n8n workflow JSONs
+│   ├── 01-daily-plan.json through 15-weekly-email-report.json
+│   └── README.md
+│
+├── scripts/
+│   ├── setup-telegram-webhook.sh   # Register Telegram webhook
+│   ├── start-n8n.sh, stop-n8n.sh
+│   └── start-khoj.sh, stop-khoj.sh
+│
+└── docs/
+    ├── ARCHITECTURE.md
+    ├── API.md
+    └── SETUP.md
 ```
+
+---
+
+## 30 Agent Tools
+
+The Claude agent has 30 function-calling tools defined in `lib/tools.ts`:
+
+| # | Tool | Category | What it does |
+|---|------|----------|-------------|
+| 1 | task_add | Tasks | Add a task to today's planner |
+| 2 | task_remove | Tasks | Remove a task by text match |
+| 3 | task_toggle | Tasks | Toggle task done/undone |
+| 4 | task_list | Tasks | List today's tasks |
+| 5 | plan_generate | Planning | AI-generate daily plan with time blocks |
+| 6 | plan_set_schedule | Planning | Set specific time blocks in schedule |
+| 7 | log_entry | Notes | Append timestamped entry to daily note |
+| 8 | save_note | Notes | Create/overwrite a vault file |
+| 9 | save_memory | Notes | Save to agent memory (preference/goal/context) |
+| 10 | vault_read | Vault | Read a vault file |
+| 11 | vault_list | Vault | List files in a vault folder |
+| 12 | vault_search | Vault | Semantic search via Khoj (fallback: local grep) |
+| 13 | vault_move | Vault | Move/rename a vault file |
+| 14 | vault_delete | Vault | Soft-delete to .trash/ |
+| 15 | vault_ask | Knowledge | RAG question about vault content via Khoj |
+| 16 | vault_versions | Version | List version history of a file |
+| 17 | vault_restore | Version | Restore a previous version |
+| 18 | save_attachment | Files | Move uploaded file to vault permanently |
+| 19 | gmail_inbox | Gmail | List emails with category/priority/status filters |
+| 20 | gmail_read | Gmail | Read a specific email by subject/sender search |
+| 21 | gmail_reply | Gmail | Reply to email (human-in-the-loop confirmation) |
+| 22 | gmail_archive | Gmail | Archive emails matching a query |
+| 23 | gmail_search | Gmail | Search emails by keyword |
+| 24 | set_reminder | n8n | Schedule a reminder notification |
+| 25 | crm_update | n8n | Query/update CRM deals and contacts |
+| 26 | telegram_send | Telegram | Send message to a saved contact |
+| 27 | telegram_contacts | Telegram | List/search Telegram contacts |
+| 28 | telegram_history | Telegram | Read conversation history with a contact |
+| 29 | discord_send | Discord | Send DM to a saved contact |
+| 30 | discord_contacts | Discord | List/search Discord contacts |
 
 ---
 
 ## Docker Services on VPS
 
-### 7 Containers (managed by Coolify)
+### 7 Containers
 
-| # | Service | Image | Port | URL | RAM |
-|---|---------|-------|------|-----|-----|
-| 1 | Coolify Proxy | traefik:v2.x | 80/443 | *.insighter.digital | 64 MB |
-| 2 | Void Dashboard | node:20 (Next.js) | 3000 | void.insighter.digital | 256 MB |
-| 3 | n8n | n8nio/n8n | 5678 | n8n.insighter.digital | 1 GB |
-| 4 | n8n PostgreSQL | postgres:16-alpine | 5432 | internal only | 256 MB |
-| 5 | Khoj | ghcr.io/khoj-ai/khoj | 42110 | khoj.insighter.digital | 2.5 GB |
-| 6 | Khoj PostgreSQL | pgvector/pgvector:pg16 | 5433 | internal only | 512 MB |
-| 7 | SearXNG | searxng/searxng | 8080 | internal only | 128 MB |
-
-**Total RAM: ~5 GB of 8 GB** (Hostinger KVM 2)
+| # | Service | Image | Port | URL |
+|---|---------|-------|------|-----|
+| 1 | Coolify Proxy | traefik:v2.x | 80/443 | *.insighter.digital (SSL) |
+| 2 | Dashboard | node:20-alpine (Next.js standalone) | 3000 | void.insighter.digital |
+| 3 | n8n | n8nio/n8n | 5678 | n8n.insighter.digital |
+| 4 | n8n PostgreSQL | postgres:16-alpine | 5432 | internal only |
+| 5 | Khoj | ghcr.io/khoj-ai/khoj | 42110 | khoj.insighter.digital |
+| 6 | Khoj PostgreSQL | pgvector/pgvector:pg16 | 5432 | internal only |
+| 7 | SearXNG | searxng/searxng | 8080 | internal only |
 
 ---
 
@@ -168,102 +267,166 @@ void-000001/
 ANTHROPIC_API_KEY=sk-ant-...
 
 # === n8n ===
-N8N_WEBHOOK_BASE=http://n8n:5678/webhook
+N8N_WEBHOOK_BASE=http://n8n:5678/webhook    # Docker internal
+# N8N_WEBHOOK_BASE=http://localhost:5678/webhook  # Local dev
 
 # === Khoj ===
-KHOJ_BASE_URL=http://khoj:42110
+KHOJ_BASE_URL=http://khoj:42110              # Docker internal
+# KHOJ_BASE_URL=http://localhost:42110        # Local dev
 KHOJ_API_KEY=your-khoj-api-token
 USE_KHOJ=true
 
 # === Vault ===
-VAULT_PATH=/opt/void-vault
+VAULT_PATH=/opt/void-vault                   # Production
+# VAULT_PATH=./vault                          # Local dev
 
-# === ElevenLabs (optional — for speech) ===
+# === Auth ===
+VOID_PASSWORD=your-secure-password
+VOID_JWT_SECRET=<openssl rand -hex 32>
+
+# === Database ===
+VOID_DB_PATH=/app/data/void.db               # Production
+# VOID_DB_PATH=./data/void.db                 # Local dev
+
+# === ElevenLabs (optional) ===
 ELEVENLABS_API_KEY=your-elevenlabs-key
 ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM
 
-# === Telegram (for notifications) ===
+# === Telegram ===
 TELEGRAM_BOT_TOKEN=your-bot-token
 TELEGRAM_CHAT_ID=your-chat-id
 
+# === Discord ===
+DISCORD_BOT_TOKEN=your-discord-bot-token
+DISCORD_APPLICATION_ID=your-discord-app-id
+DISCORD_PUBLIC_KEY=your-discord-public-key
+DISCORD_OWNER_ID=your-discord-user-id
+
+# === Gmail Triage ===
+GMAIL_TRIAGE_SECRET=shared-secret-between-n8n-and-void
+
 # === Timezone ===
 TIMEZONE=Asia/Dhaka
+TZ=Asia/Dhaka
 ```
 
 ---
 
-## API Routes — Specification
+## Data Flows
 
-### Direct Actions (no n8n required)
+### Chat (Browser)
+```
+1. User types message in /agent page
+2. ChatPanel → POST /api/chat-stream (SSE) or fallback /api/chat
+3. Route searches Khoj for vault context
+4. Route calls streamChatWithTools() with 21 tools
+5. Claude reasons, calls tools (e.g., save_note, search_vault)
+6. Tool results fed back to Claude for next round (max 10 rounds)
+7. Tokens stream back via SSE events: token → tool_start → tool_done → done
+8. ChatPanel renders tokens as they arrive
+9. Messages persisted to SQLite via db.ts
+```
 
-| Route | Method | Purpose |
-|-------|--------|---------|
-| `/api/chat` | POST | Chat with Claude + auto-execute log/memory/save actions |
-| `/api/action/log` | POST | Append to daily note (writes directly to vault) |
-| `/api/action/memory` | POST | Save to agent memory (writes directly to vault) |
-| `/api/vault/read` | POST | Read vault file |
-| `/api/vault/write` | POST | Write vault file |
-| `/api/vault/list` | GET | List vault files |
-| `/api/search` | POST | Semantic search via Khoj |
-| `/api/health` | GET | Health check |
-| `/api/planner` | GET | Get today's tasks |
-| `/api/speech` | POST | Text-to-speech via ElevenLabs |
-| `/api/practice` | POST | Practice mode |
+### Chat (Telegram — Owner)
+```
+1. Owner sends message to Telegram bot
+2. Telegram → POST /api/telegram/webhook
+3. Webhook checks isOwnerChat() → routes to handleOwnerMessage()
+4. Uses same chatWithTools() pipeline as browser (30 tools)
+5. Response sent back via Telegram sendMessage API
+6. Long messages auto-split at 4096 chars
+```
 
-### n8n-Proxied Actions
+### Chat (Telegram — External User)
+```
+1. External user messages the bot
+2. Webhook checks isOwnerChat() → routes to handleExternalMessage()
+3. Auto-registers contact in telegram_contacts table
+4. Reads persona.md + today's schedule for context
+5. Uses chat() (no tools) with persona prompt → replies as Imran
+6. Owner gets notification with message + auto-reply preview
+```
 
-| Route | Method | Purpose |
-|-------|--------|---------|
-| `/api/action/plan` | POST | Trigger daily plan creation |
-| `/api/action/email` | POST | Read/send email via Gmail |
-| `/api/action/remind` | POST | Schedule Telegram reminder |
-| `/api/action/crm` | POST | Query/update CRM pipeline |
+### Chat (Discord — /void command)
+```
+1. User types /void message in Discord server
+2. Discord → POST /api/discord/interactions
+3. Verifies ed25519 signature, returns DEFERRED response (3-sec limit)
+4. Async: isDiscordOwner() → full agent or persona auto-reply
+5. editInteractionResponse() sends reply to Discord
+6. External users auto-registered, owner notified via DM
+```
+
+### Gmail Auto-Triage
+```
+1. n8n polls Gmail every 5 minutes for unread emails
+2. Each email → Claude API classifies (category/priority/action/summary)
+3. Classified email → POST /api/gmail/triage
+4. Triage endpoint stores in vault (00-Inbox/emails/) + SQLite
+5. Urgent emails → instant Telegram notification to owner
+6. Spam/newsletters → auto-archived in Gmail
+7. User asks VOID "check my email" → gmail_inbox tool queries SQLite
+8. User says "reply to Ahmed" → gmail_reply tool (confirms first)
+```
+
+### File Upload
+```
+1. User drags image/PDF into chat (FileUpload component)
+2. POST /api/upload → saves to uploads/<date>/<uuid>_<filename>
+3. For PDFs: extracts text via pdf-parse
+4. Attachment data sent with next chat message
+5. Claude sees image description or PDF text as context
+6. Agent can call save_attachment to move to vault permanently
+7. Old uploads auto-cleaned after 30 days
+```
+
+### Version History
+```
+1. Any writeFile() call in vault.ts → saveVersion() first
+2. Current content saved to .versions/<filepath>/<ISO-timestamp>.md
+3. User asks "show versions of goals.md" → vault_versions tool
+4. User asks "restore yesterday's version" → vault_restore tool
+5. Restore saves current as new version, then overwrites with old content
+```
 
 ---
 
-## Markdown Vault Structure
+## Deployment
 
-```
-/opt/void-vault/
-├── 00-Inbox/                    # Quick capture, unsorted notes
-├── 01-Daily/                    # Daily notes: 2026-02-02.md
-├── 02-Learning/                 # Study notes, course notes
-├── 03-Office/                   # Work-related notes
-├── 04-Projects/                 # Project documentation
-├── 05-References/               # Saved articles, bookmarks
-├── 06-Reviews/                  # Weekly/monthly reviews
-├── 07-Agent-Memory/             # Agent's persistent memory
-│   ├── preferences.md
-│   ├── goals.md
-│   └── agent-context.md
-└── 99-System/templates/         # Note templates
+### Auto-deploy (Dashboard)
+```bash
+git push   # Coolify watches master branch → auto-builds via Nixpacks
 ```
 
----
-
-## Deployment Checklist
-
+### Manual Docker services (SSH to VPS)
+```bash
+ssh root@69.62.80.66
+cd /path/to/docker
+docker-compose -f docker-compose.khoj.yml up -d
+docker-compose -f docker-compose.n8n.yml up -d
 ```
-1. Buy Hostinger KVM 2 VPS — Ubuntu 24.04 + Coolify
-2. SSH in, access Coolify, create admin account
-3. Configure domain — add A records for: void, n8n, khoj → VPS IP
-4. Deploy n8n via Coolify → n8n.insighter.digital
-5. Deploy Khoj via Coolify → khoj.insighter.digital
-6. Create vault: mkdir -p /opt/void-vault/{00-Inbox,...,07-Agent-Memory,99-System}
-7. Write initial memory files: preferences.md, goals.md, agent-context.md
-8. Configure Khoj: admin panel → point to vault → set Claude API key → index
-9. Create Telegram bot via @BotFather → get token
-10. Build n8n workflows
-11. Push dashboard to GitHub
-12. Deploy dashboard via Coolify (Nixpacks) → void.insighter.digital
-13. Set environment variables in Coolify
-14. Test full flow: chat → vault write → Khoj search
-15. Set up Coolify database backups
+
+### Telegram Webhook Setup
+```bash
+./scripts/setup-telegram-webhook.sh
+# Registers https://void.insighter.digital/api/telegram/webhook with Telegram
 ```
 
 ---
 
-## Quick Reference — Key Commands
+## Build Notes / Gotchas
+
+- `pdf-parse` must use `require()`, not dynamic import — no `.default` in ESM
+- Both `better-sqlite3` and `pdf-parse` in `serverExternalPackages` (next.config.ts)
+- Next.js 16 shows middleware deprecation warning — prefers "proxy" convention
+- `chatWithTools()` only accepts `Message[]` with string content, not Anthropic ContentBlock arrays
+- `addMessage()` signature: `addMessage(conversationId, { id, role, content })` — NOT positional args
+- Version filenames use dashes (2026-02-08T06-14-53-069Z.md), restoreVersion does flexible matching
+- Telegram webhook is in PUBLIC_PATHS (no JWT) — validates by checking TELEGRAM_CHAT_ID instead
+
+---
+
+## Quick Reference Commands
 
 ```bash
 # Local development
@@ -271,7 +434,7 @@ npm run dev                          # Start dashboard locally
 npm run build                        # Production build
 npm run lint                         # Check code quality
 
-# Git → auto-deploy via Coolify
+# Git → auto-deploy
 git add . && git commit -m "msg" && git push
 
 # VPS access

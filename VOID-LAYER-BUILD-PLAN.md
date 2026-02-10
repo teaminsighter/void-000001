@@ -4,7 +4,7 @@
 
 ---
 
-## Overview: 8 Layers
+## Overview: 10 Layers
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -50,9 +50,24 @@
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ LAYER 8: Auth, Theme, UI Overhaul, Widget Dashboard  IN PROGRESS│
-│ Password auth, dark/light theme, Linear-style UI, widgets       │
-│ TEST: Full system works end-to-end with auth + configurable UI  │
+│ LAYER 8 / PHASE 2: Streaming, Auth, Voice, Telegram, Files DONE │
+│ SSE streaming, JWT auth, ElevenLabs TTS, Telegram agent,        │
+│ file uploads, version history, conversation persistence          │
+│ TEST: Full end-to-end — browser + Telegram, streaming + tools   │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ LAYER 9: Telegram Auto-Reply + Discord Agent               DONE  │
+│ Owner/external split, persona auto-reply as Imran, contacts,     │
+│ outbound messaging, Discord /void slash command, notifications   │
+│ TEST: External user messages → persona reply + owner notified    │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ LAYER 10: Gmail Auto-Triage Pipeline                       DONE  │
+│ n8n polls Gmail → Claude classifies → vault + SQLite storage,    │
+│ urgent alerts, spam auto-archive, 5 Gmail tools, weekly report  │
+│ TEST: "check my email" returns classified inbox, reply works     │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -108,7 +123,7 @@ Claude API             n8n (:5678) webhooks
 
 ---
 
-## Complete Folder Structure (Current State)
+## Complete Folder Structure (Current State — Post Phase 2)
 
 ```
 void-000001/
@@ -116,111 +131,118 @@ void-000001/
 ├── .env.example                    # Template for secrets (commit)
 ├── .gitignore
 ├── package.json
+├── next.config.ts                  # serverExternalPackages: better-sqlite3, pdf-parse
+├── middleware.ts                   # JWT auth guard (PUBLIC_PATHS whitelist)
 ├── postcss.config.mjs
 ├── tsconfig.json
 ├── README.md
 │
 ├── app/                            # === NEXT.JS APP ===
 │   ├── layout.tsx                  # Root layout (fonts, theme)
-│   ├── page.tsx                    # Home page (/)
+│   ├── page.tsx                    # Home dashboard (/)
 │   ├── globals.css                 # Tailwind v4 + custom styles
-│   ├── agent/page.tsx              # Chat with AI (/agent)
+│   ├── agent/page.tsx              # AI chat (/agent)
 │   ├── planner/page.tsx            # Daily planner (/planner)
 │   ├── vault/page.tsx              # Vault browser (/vault)
+│   ├── login/page.tsx              # Password login (/login)
 │   ├── mail/page.tsx               # Email inbox (/mail)
 │   ├── research/page.tsx           # Research (/research)
 │   ├── saved/page.tsx              # Saved items (/saved)
 │   ├── bots/page.tsx               # Bot status (/bots)
-│   ├── practice/page.tsx           # Practice (/practice)
+│   ├── practice/page.tsx           # Voice practice (/practice)
 │   └── api/                        # === BACKEND API ROUTES ===
-│       ├── health/route.ts
-│       ├── chat/route.ts           # POST → Claude API (direct vault writes)
-│       ├── planner/route.ts
-│       ├── speech/route.ts
-│       ├── search/route.ts         # POST → Khoj
-│       ├── practice/route.ts
+│       ├── chat/route.ts           # POST → Claude + 21 tools (non-streaming)
+│       ├── chat-stream/route.ts    # POST → SSE streaming chat (same tools)
+│       ├── upload/route.ts         # POST → file upload (image/PDF)
+│       ├── auth/
+│       │   ├── login/route.ts      # POST → JWT login
+│       │   └── logout/route.ts     # POST → clear JWT cookie
+│       ├── conversations/
+│       │   ├── route.ts            # GET/POST → list/create conversations
+│       │   └── [id]/
+│       │       ├── route.ts        # GET/DELETE → get/delete conversation
+│       │       └── messages/route.ts # GET → messages for conversation
+│       ├── telegram/
+│       │   └── webhook/route.ts    # POST → Telegram bot (full agent)
+│       ├── health/route.ts         # GET → health check
+│       ├── planner/route.ts        # GET/POST → today's tasks
+│       ├── speech/route.ts         # POST → ElevenLabs TTS
+│       ├── search/route.ts         # POST → Khoj semantic search
+│       ├── practice/route.ts       # POST → practice mode
 │       ├── vault/
-│       │   ├── list/route.ts
-│       │   ├── read/route.ts
-│       │   └── write/route.ts
-│       └── action/
+│       │   ├── list/route.ts       # GET → list vault files
+│       │   ├── read/route.ts       # POST → read vault file
+│       │   └── write/route.ts      # POST → write vault file
+│       └── action/                 # n8n-proxied actions
+│           ├── log/route.ts        # POST → daily note (direct)
+│           ├── memory/route.ts     # POST → agent memory (direct)
 │           ├── plan/route.ts       # POST → n8n /webhook/plan
-│           ├── log/route.ts        # POST → writes directly to vault
-│           ├── memory/route.ts     # POST → writes directly to vault
 │           ├── email/route.ts      # POST → n8n /webhook/email
 │           ├── remind/route.ts     # POST → n8n /webhook/remind
 │           └── crm/route.ts        # POST → n8n /webhook/crm
 │
 ├── components/
-│   ├── layout/
-│   │   ├── Sidebar.tsx
-│   │   ├── Topbar.tsx
-│   │   ├── MainLayout.tsx
-│   │   ├── CommandPalette.tsx
-│   │   └── index.ts
-│   ├── chat/
-│   │   ├── ChatPanel.tsx
-│   │   ├── ChatMessage.tsx
-│   │   ├── QuickPrompts.tsx
-│   │   └── index.ts
-│   ├── dashboard/
-│   │   ├── StatCard.tsx
-│   │   ├── TaskList.tsx
-│   │   ├── EmailPreview.tsx
-│   │   ├── VaultRecent.tsx
-│   │   ├── PipelineMini.tsx
-│   │   ├── QuickActions.tsx
-│   │   └── index.ts
-│   └── ui/
-│       ├── Pill.tsx
-│       ├── Badge.tsx
-│       ├── Button.tsx
-│       └── index.ts
+│   ├── layout/                     # App shell
+│   │   ├── MainLayout.tsx, LayoutWrapper.tsx
+│   │   ├── Sidebar.tsx, Topbar.tsx
+│   │   └── CommandPalette.tsx
+│   ├── chat/                       # Chat UI
+│   │   ├── ChatPanel.tsx           # Full chat (streaming, attachments, voice)
+│   │   ├── ChatMessage.tsx         # Message bubble (markdown, TTS)
+│   │   ├── ToolActions.tsx         # Tool execution badges
+│   │   ├── QuickPrompts.tsx        # Suggested prompts
+│   │   ├── FileUpload.tsx          # Drag-drop file upload
+│   │   ├── VoiceButton.tsx         # Hold-to-talk STT mic
+│   │   └── SpeakButton.tsx         # TTS play button
+│   ├── dashboard/                  # Home page widgets
+│   │   ├── StatCard.tsx, TaskList.tsx, VaultRecent.tsx
+│   │   ├── EmailPreview.tsx, PipelineMini.tsx
+│   │   ├── HomeRightPanel.tsx, QuickActions.tsx
+│   ├── agent/AgentRightPanel.tsx
+│   ├── vault/                      # Vault browser
+│   │   ├── FileTable.tsx, FolderFilter.tsx, VaultSearch.tsx
+│   ├── planner/TaskManager.tsx, TimeBlocks.tsx
+│   ├── ui/Button.tsx, Badge.tsx, Pill.tsx
+│   └── research/, mail/, saved/, bots/
 │
-├── lib/
-│   ├── anthropic.ts                # Claude API wrapper
-│   ├── vault.ts                    # Vault file operations (direct filesystem)
-│   ├── prompts.ts                  # AI system prompts + action parsing
-│   ├── khoj.ts                     # Khoj search API
+├── lib/                            # === CORE LIBRARIES ===
+│   ├── anthropic.ts                # Claude API: chat(), chatWithTools(), streamChatWithTools()
+│   ├── tools.ts                    # 21 tool schemas for Claude function calling
+│   ├── vault.ts                    # Vault: read/write/list/move/delete + versioning
+│   ├── prompts.ts                  # System prompt builder
+│   ├── khoj.ts                     # Khoj search + RAG: search(), khojChat()
+│   ├── db.ts                       # SQLite: conversations + messages
+│   ├── auth.ts                     # JWT: signToken(), verifyToken()
+│   ├── uploads.ts                  # File upload: saveUpload(), moveToVault()
+│   ├── telegram.ts                 # Telegram Bot API helpers
+│   ├── events.ts                   # Event bus: emitDataChanged()
 │   ├── types.ts                    # TypeScript types
 │   ├── n8n.ts                      # n8n webhook caller
 │   └── mock-data.ts                # Mock data fallbacks
 │
 ├── hooks/
-│   ├── useChat.ts
-│   ├── useTasks.ts
-│   └── useKeyboard.ts
+│   ├── useChat.ts, useTasks.ts, useKeyboard.ts, useTheme.ts
 │
-├── docker/
-│   ├── docker-compose.yml
-│   ├── docker-compose.n8n.yml
-│   ├── docker-compose.khoj.yml
-│   ├── Dockerfile
-│   ├── .env
-│   └── .env.example
+├── docker/                         # Docker configs for VPS
+│   ├── Dockerfile                  # Dashboard multi-stage build
+│   ├── docker-compose.yml          # Main orchestrator (includes khoj + n8n)
+│   ├── docker-compose.khoj.yml     # Khoj + pgvector + SearXNG
+│   ├── docker-compose.n8n.yml      # n8n + PostgreSQL
+│   └── .env                        # Production env vars template
 │
-├── vault-template/                 # Vault starter folders
-│   ├── 00-Inbox/
-│   ├── 01-Daily/
-│   ├── 02-Learning/
-│   ├── 03-Office/
-│   ├── 04-Projects/
-│   ├── 05-References/
-│   ├── 06-Reviews/
-│   ├── 07-Agent-Memory/
-│   │   ├── preferences.md
-│   │   ├── goals.md
-│   │   └── agent-context.md
+├── vault-template/                 # Vault starter structure
+│   ├── 00-Inbox/ through 06-Reviews/
+│   ├── 07-Agent-Memory/            # goals.md, preferences.md, agent-context.md
 │   └── 99-System/templates/daily.md
 │
-├── n8n-workflows/                  # Exported n8n workflow JSON files
-│   ├── README.md
-│   └── 01-daily-plan.json ... 13-memory-updater.json
+├── n8n-workflows/                  # 13 exported n8n workflow JSONs
+│   ├── 01-daily-plan.json through 13-memory-updater.json
+│   └── README.md
 │
-├── scripts/                        # Docker management scripts
-│   ├── start-n8n.sh / stop-n8n.sh
-│   ├── start-khoj.sh / stop-khoj.sh
-│   └── docker-compose.*.yml
+├── scripts/
+│   ├── setup-telegram-webhook.sh
+│   ├── start-n8n.sh, stop-n8n.sh
+│   └── start-khoj.sh, stop-khoj.sh
 │
 └── docs/
     ├── ARCHITECTURE.md
@@ -237,12 +259,12 @@ void-000001/
 │                              YOUR DEVICES                                    │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│   ┌─────────────┐                           ┌─────────────┐                 │
-│   │   Browser   │                           │  Telegram   │                 │
-│   │ (Dashboard) │                           │  (Mobile)   │                 │
-│   └──────┬──────┘                           └──────┬──────┘                 │
-│          │                                         │                        │
-└──────────┼─────────────────────────────────────────┼────────────────────────┘
+│   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐                    │
+│   │   Browser   │    │  Telegram   │    │  Discord    │                    │
+│   │ (Dashboard) │    │  (Mobile)   │    │ (/void cmd) │                    │
+│   └──────┬──────┘    └──────┬──────┘    └──────┬──────┘                    │
+│          │                  │                  │                            │
+└──────────┼──────────────────┼──────────────────┼────────────────────────────┘
            │ HTTPS                                   │ Telegram API
            │                                         │
            ▼                                         ▼
@@ -338,17 +360,62 @@ void-000001/
 
 ---
 
-## Layer 8 Roadmap (Current)
+## Layer 8 / Phase 2 — COMPLETED (commit 5bcab80)
 
-| Phase | Feature | Status |
-|-------|---------|--------|
-| 8.1 | Password authentication (JWT + middleware) | In progress |
-| 8.2 | Dark/Light theme toggle | Planned |
-| 8.3 | UI overhaul (Linear-style cleanup) | Planned |
-| 8.4 | Widget dashboard system | Planned |
-| 8.5 | Agent widget creation action | Planned |
-| 8.6 | Chart widgets (Recharts) | Planned |
+**87 files changed, 6674 insertions, 3923 deletions**
+
+| Feature | What was built |
+|---------|---------------|
+| SSE Streaming | `/api/chat-stream` — token-by-token streaming with fallback to `/api/chat` |
+| JWT Auth | Password login at `/login`, middleware guards all routes, `jose` library |
+| File Uploads | Drag-drop images/PDFs, `/api/upload`, PDF text extraction via `pdf-parse` |
+| Version History | Auto-snapshots in `.versions/` before every overwrite, restore any version |
+| Voice | `VoiceButton` (STT via Web Speech API) + `SpeakButton` (TTS via ElevenLabs) |
+| Telegram Agent | `/api/telegram/webhook` — full tool pipeline, same 21 tools as browser |
+| Conversations | SQLite persistence via `better-sqlite3`, `/api/conversations` CRUD |
+| Khoj Upgrade | Semantic search + `khojChat()` RAG with local grep fallback |
+| 21 Tools | 17 original + `vault_versions` + `vault_restore` + `vault_ask` + `save_attachment` |
+
+## Layer 9 — Telegram Auto-Reply + Discord Agent — COMPLETED
+
+| Feature | What was built |
+|---------|---------------|
+| Telegram Auto-Reply | Owner gets full agent (27 tools), external users get persona auto-reply as Imran |
+| Persona System | `buildPersonaPrompt()` reads `07-Agent-Memory/persona.md` for tone/rules |
+| Contact Registry | `telegram_contacts` + `discord_contacts` tables with auto-registration |
+| 6 Messaging Tools | `telegram_send/contacts/history` + `discord_send/contacts/history` |
+| Discord Slash Command | `/void message` via HTTP Interactions (no WebSocket) |
+| ed25519 Verification | Discord signature verification in `lib/discord.ts` |
+| Owner Notifications | Owner gets DM/message when external users interact |
+| Contacts API | `/api/contacts` returns both Telegram + Discord contacts |
+| Setup Endpoints | `/api/telegram/setup` + `/api/discord/setup` for webhook/command registration |
+
+## Layer 10 — Gmail Auto-Triage Pipeline — COMPLETED
+
+| Feature | What was built |
+|---------|---------------|
+| Auto-Triage | n8n polls Gmail every 5 min → Claude classifies (category/priority/action/summary) |
+| Vault Storage | Classified emails saved to `00-Inbox/emails/` as markdown with YAML frontmatter |
+| SQLite Storage | `gmail_emails` table with 6 CRUD functions for fast querying |
+| Smart Notifications | Urgent emails → instant Telegram alert; spam → auto-archived |
+| 5 Gmail Tools | `gmail_inbox`, `gmail_read`, `gmail_reply`, `gmail_archive`, `gmail_search` |
+| Human-in-the-Loop | `gmail_reply` always asks user to confirm before sending |
+| Morning Briefing | Enhanced with email summary (unread count, urgent emails, pending replies) |
+| Weekly Report | n8n workflow (Sunday 9 PM) — Claude analyzes patterns, saves to vault |
+| Email Manager | Upgraded n8n workflow with read/send/archive/search actions |
+| Triage API | `/api/gmail/triage` (POST from n8n) + `/api/gmail/stats` (GET for reports) |
+
+## What's Next (Phase 3 — Planned)
+
+| Feature | Description |
+|---------|-------------|
+| UI Overhaul | Linear-style cleanup, better dark theme |
+| Widget Dashboard | Configurable home page widgets |
+| Agent Widgets | Agent can create/update dashboard widgets |
+| Chart Widgets | Data visualization (Recharts or similar) |
+| Mobile PWA | Progressive web app for mobile access |
+| WhatsApp Integration | WhatsApp Business API via n8n (when ready) |
 
 ---
 
-> **Note:** Layer 4 step 4.1 code samples were initial scaffolds — real implementations now exist in `lib/`. See the actual source files for current API logic.
+> **Note:** All layers 1-10 are complete. The codebase is fully functional across web, Telegram, Discord, and Gmail. 30 tools total.
