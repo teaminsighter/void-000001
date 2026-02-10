@@ -184,8 +184,14 @@ void-000001/
 │   └── .env                        # Production env vars template
 │
 ├── vault-template/                 # Vault starter structure
-│   ├── 00-Inbox/ through 06-Reviews/
-│   ├── 07-Agent-Memory/            # goals.md, preferences.md, agent-context.md
+│   ├── 00-Inbox/ through 04-Projects/
+│   ├── 05-References/              # Personal knowledge base (agent saves here)
+│   │   ├── websites/               # URLs, tools, design resources
+│   │   ├── videos/                 # YouTube, tutorials, talks
+│   │   ├── contacts/               # Phone numbers, addresses, people
+│   │   ├── emails/                 # Important email references
+│   │   └── notes/                  # Tips, code snippets, how-tos
+│   ├── 06-Reviews/ + 07-Agent-Memory/
 │   └── 99-System/templates/daily.md
 │
 ├── n8n-workflows/                  # 15 exported n8n workflow JSONs
@@ -367,6 +373,17 @@ TZ=Asia/Dhaka
 6. Spam/newsletters → auto-archived in Gmail
 7. User asks VOID "check my email" → gmail_inbox tool queries SQLite
 8. User says "reply to Ahmed" → gmail_reply tool (confirms first)
+```
+
+### Saving References (Personal Knowledge Base)
+```
+1. User says "save this URL, it's great for button designs" (web/Telegram/Discord)
+2. Agent calls vault_write → 05-References/websites/site-name.md
+3. Note saved with YAML frontmatter (type, url, tags, saved date) + context
+4. Khoj indexes the note automatically
+5. User later asks "what site is good for button design?"
+6. Agent calls vault_ask → Khoj semantic search finds the note → returns URL + context
+Works for: URLs, YouTube videos, phone numbers, addresses, code tips, email refs
 ```
 
 ### File Upload

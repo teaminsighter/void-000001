@@ -405,6 +405,17 @@ void-000001/
 | Email Manager | Upgraded n8n workflow with read/send/archive/search actions |
 | Triage API | `/api/gmail/triage` (POST from n8n) + `/api/gmail/stats` (GET for reports) |
 
+## Layer 10b — Personal Knowledge Base (References) — COMPLETED
+
+| Feature | What was built |
+|---------|---------------|
+| Vault Structure | `05-References/` with subfolders: websites/, videos/, contacts/, emails/, notes/ |
+| Agent Instructions | System prompt updated — agent saves references with YAML frontmatter + context |
+| Template Notes | 4 example notes (website, video, contact, code tip) showing consistent format |
+| Natural Recall | "What site is good for button design?" → vault_ask finds it via Khoj semantic search |
+| Cross-Platform | Works from web chat, Telegram, Discord — same vault_write + vault_ask tools |
+| No New Code | Zero new tools, APIs, or DB tables — leverages existing vault + Khoj infrastructure |
+
 ## What's Next (Phase 3 — Planned)
 
 | Feature | Description |
