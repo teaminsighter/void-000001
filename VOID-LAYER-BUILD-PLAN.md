@@ -428,6 +428,7 @@ void-000001/
 | `lib/web.ts` | New helper library — zero dependencies (native fetch + regex HTML parsing) |
 | All 4 Platforms | Tool cases added to chat, chat-stream, Telegram webhook, Discord interactions |
 | `SEARXNG_URL` env | Configurable SearXNG endpoint (self-hosted, no API keys needed) |
+| Chat input fix | Auto-refocus input after sending — no need to click the box again |
 
 ## What's Next (Phase 3 — Planned)
 

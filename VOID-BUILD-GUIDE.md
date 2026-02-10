@@ -23,7 +23,7 @@ Browser (you)     Telegram (mobile)     Discord (/void)
 Coolify Reverse Proxy (:443) — auto SSL, routes by subdomain
     ↓ HTTP internal
 Void Dashboard (:3000) — Next.js 16, hides API keys
-    ├── Claude API (reasoning + 30 tools)
+    ├── Claude API (reasoning + 34 tools)
     ├── Vault filesystem (/opt/void-vault — direct read/write)
     ├── SQLite DB (/app/data/void.db — conversations + contacts + emails)
     ├── Khoj (:42110 — semantic search + RAG)
@@ -328,11 +328,11 @@ TZ=Asia/Dhaka
 1. User types message in /agent page
 2. ChatPanel → POST /api/chat-stream (SSE) or fallback /api/chat
 3. Route searches Khoj for vault context
-4. Route calls streamChatWithTools() with 21 tools
+4. Route calls streamChatWithTools() with 34 tools
 5. Claude reasons, calls tools (e.g., save_note, search_vault)
 6. Tool results fed back to Claude for next round (max 10 rounds)
 7. Tokens stream back via SSE events: token → tool_start → tool_done → done
-8. ChatPanel renders tokens as they arrive
+8. ChatPanel renders tokens as they arrive (auto-refocuses input after send)
 9. Messages persisted to SQLite via db.ts
 ```
 
@@ -341,7 +341,7 @@ TZ=Asia/Dhaka
 1. Owner sends message to Telegram bot
 2. Telegram → POST /api/telegram/webhook
 3. Webhook checks isOwnerChat() → routes to handleOwnerMessage()
-4. Uses same chatWithTools() pipeline as browser (30 tools)
+4. Uses same chatWithTools() pipeline as browser (34 tools)
 5. Response sent back via Telegram sendMessage API
 6. Long messages auto-split at 4096 chars
 ```
