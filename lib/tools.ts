@@ -580,4 +580,38 @@ export const VOID_TOOLS: Tool[] = [
       required: ['contact_name'],
     },
   },
+
+  // ── Web Tools ─────────────────────────
+  {
+    name: 'web_fetch',
+    description: 'Fetch a URL and extract its metadata (title, description, content preview). Use when the user shares a URL and you need to understand what it is, or before saving a URL reference to the vault. Handles YouTube URLs specially via oEmbed.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        url: {
+          type: 'string',
+          description: 'The URL to fetch (e.g. "https://example.com/article")',
+        },
+      },
+      required: ['url'],
+    },
+  },
+  {
+    name: 'web_search',
+    description: 'Search the web using SearXNG and return results. Use ONLY when the user explicitly asks to search the web, look something up online, or asks a question requiring current/live information. Never use this for questions about the user\'s own data — use vault_search or vault_ask instead.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        query: {
+          type: 'string',
+          description: 'The search query',
+        },
+        limit: {
+          type: 'number',
+          description: 'Max results to return (default: 5, max: 10)',
+        },
+      },
+      required: ['query'],
+    },
+  },
 ];

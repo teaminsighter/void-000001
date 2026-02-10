@@ -14,6 +14,7 @@ import {
 import { sendTelegramMessage } from '@/lib/telegram';
 import { appendToLog, writeFile, readFile, listFiles, moveFile, softDelete, listVersions, restoreVersion } from '@/lib/vault';
 import { triggerWorkflow } from '@/lib/n8n';
+import { fetchWebPage, searchWeb } from '@/lib/web';
 import {
   addMessage, createConversation, getConversation, getMessages,
   upsertContact, getContactByName, listContacts, getContactByTelegramId,
@@ -205,6 +206,35 @@ async function executeTool(
         const recent = msgs.slice(-(input.limit as number || 10));
         if (!recent.length) return { result: `No conversation history with ${contact.display_name}`, success: true };
         return { result: recent.map(m => `[${m.role}] ${m.content}`).join('\n'), success: true };
+      }
+
+      // ── Web Tools ─────────────────────
+      case 'web_fetch': {
+        const metadata = await fetchWebPage(input.url as string);
+        const parts = [
+          `**${metadata.title}**`,
+          metadata.siteName ? `Site: ${metadata.siteName}` : '',
+          metadata.description ? `Description: ${metadata.description}` : '',
+          metadata.author ? `Author: ${metadata.author}` : '',
+          metadata.type ? `Type: ${metadata.type}` : '',
+          `URL: ${metadata.url}`,
+          '',
+          'Content Preview:',
+          metadata.contentPreview,
+        ].filter(Boolean).join('\n');
+        return { result: parts, success: true };
+      }
+
+      case 'web_search': {
+        const limit = Math.min((input.limit as number) || 5, 10);
+        const searchRes = await searchWeb(input.query as string, limit);
+        if (searchRes.count === 0) {
+          return { result: `No web results found for "${input.query}".`, success: false };
+        }
+        const resultList = searchRes.results.map((r, i) =>
+          `${i + 1}. **${r.title}**\n   ${r.url}\n   ${r.content}`
+        ).join('\n\n');
+        return { result: `Web results for "${input.query}" (${searchRes.count}):\n\n${resultList}`, success: true };
       }
 
       default: return { result: `Unknown: ${name}`, success: false };

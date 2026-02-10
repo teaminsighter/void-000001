@@ -211,9 +211,9 @@ void-000001/
 
 ---
 
-## 30 Agent Tools
+## 34 Agent Tools
 
-The Claude agent has 30 function-calling tools defined in `lib/tools.ts`:
+The Claude agent has 34 function-calling tools defined in `lib/tools.ts`:
 
 | # | Tool | Category | What it does |
 |---|------|----------|-------------|
@@ -247,6 +247,9 @@ The Claude agent has 30 function-calling tools defined in `lib/tools.ts`:
 | 28 | telegram_history | Telegram | Read conversation history with a contact |
 | 29 | discord_send | Discord | Send DM to a saved contact |
 | 30 | discord_contacts | Discord | List/search Discord contacts |
+| 31 | discord_history | Discord | Read conversation history with a contact |
+| 32 | web_fetch | Web | Fetch URL metadata (title, description, OG tags, content) |
+| 33 | web_search | Web | Search the web via SearXNG (user must explicitly ask) |
 
 ---
 
@@ -378,12 +381,21 @@ TZ=Asia/Dhaka
 ### Saving References (Personal Knowledge Base)
 ```
 1. User says "save this URL, it's great for button designs" (web/Telegram/Discord)
-2. Agent calls vault_write → 05-References/websites/site-name.md
-3. Note saved with YAML frontmatter (type, url, tags, saved date) + context
+2. Agent calls web_fetch → gets real title, description, content preview
+3. Agent calls vault_write → 05-References/websites/site-name.md (enriched note)
 4. Khoj indexes the note automatically
 5. User later asks "what site is good for button design?"
 6. Agent calls vault_ask → Khoj semantic search finds the note → returns URL + context
 Works for: URLs, YouTube videos, phone numbers, addresses, code tips, email refs
+```
+
+### Web Search
+```
+1. User says "search the web for best CSS framework 2026"
+2. Agent calls web_search → queries self-hosted SearXNG
+3. SearXNG returns top results (titles, URLs, snippets)
+4. Claude reads results and synthesizes a smart answer
+Only triggered when user explicitly asks — vault search is always preferred
 ```
 
 ### File Upload

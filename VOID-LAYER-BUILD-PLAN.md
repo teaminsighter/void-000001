@@ -416,6 +416,19 @@ void-000001/
 | Cross-Platform | Works from web chat, Telegram, Discord — same vault_write + vault_ask tools |
 | No New Code | Zero new tools, APIs, or DB tables — leverages existing vault + Khoj infrastructure |
 
+## Layer 11 — Web Fetch & Search — COMPLETED
+
+| Feature | What was built |
+|---------|---------------|
+| `web_fetch` tool | Fetches any URL → extracts title, description, OG tags, content preview (2000 char limit) |
+| `web_search` tool | Queries self-hosted SearXNG → returns top results for Claude to synthesize |
+| YouTube oEmbed | YouTube URLs get clean metadata via oEmbed API (title, author, thumbnail) |
+| SSRF Protection | Blocks private IPs (localhost, 10.x, 172.x, 192.168.x, metadata endpoints) |
+| Privacy Control | web_search only fires when user explicitly asks; vault search always preferred |
+| `lib/web.ts` | New helper library — zero dependencies (native fetch + regex HTML parsing) |
+| All 4 Platforms | Tool cases added to chat, chat-stream, Telegram webhook, Discord interactions |
+| `SEARXNG_URL` env | Configurable SearXNG endpoint (self-hosted, no API keys needed) |
+
 ## What's Next (Phase 3 — Planned)
 
 | Feature | Description |
@@ -429,4 +442,4 @@ void-000001/
 
 ---
 
-> **Note:** All layers 1-10 are complete. The codebase is fully functional across web, Telegram, Discord, and Gmail. 30 tools total.
+> **Note:** All layers 1-11 are complete. The codebase is fully functional across web, Telegram, Discord, and Gmail. 34 tools total.
