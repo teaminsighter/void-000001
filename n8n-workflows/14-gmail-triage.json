@@ -1,0 +1,138 @@
+{
+  "name": "Gmail Auto-Triage",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "cronExpression", "expression": "*/5 * * * *"}]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 10,
+        "filters": {"q": "is:unread", "labelIds": ["INBOX"]},
+        "options": {"dataPropertyAttachmentsPrefixName": ""}
+      },
+      "id": "gmail-fetch",
+      "name": "Fetch Unread Emails",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [500, 300],
+      "credentials": {"gmailOAuth2": {"id": "gmail-oauth", "name": "Gmail OAuth2"}}
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": false, "leftValue": "", "typeValidation": "loose"},
+          "conditions": [
+            {
+              "id": "has-emails",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {"type": "string", "operation": "isNotEmpty"}
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-empty",
+      "name": "Has Emails?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "anthropic-version", "value": "2023-06-01"},
+            {"name": "content-type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 300,\n  \"messages\": [{\n    \"role\": \"user\",\n    \"content\": \"Classify this email. Return ONLY valid JSON, no other text:\\n{\\\"category\\\": \\\"work|personal|finance|newsletter|spam|other\\\",\\n \\\"priority\\\": \\\"urgent|normal|low\\\",\\n \\\"action\\\": \\\"reply|pay|read|ignore\\\",\\n \\\"summary\\\": \\\"one line summary\\\"}\\n\\nFrom: {{ $json.from?.emailAddress || $json.from || 'Unknown' }}\\nSubject: {{ $json.subject || 'No Subject' }}\\nSnippet: {{ ($json.snippet || '').substring(0, 500) }}\"\n  }]\n}",
+        "options": {}
+      },
+      "id": "claude-classify",
+      "name": "Claude Classify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 200],
+      "credentials": {"httpHeaderAuth": {"id": "anthropic-key", "name": "Anthropic API Key"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "const email = $('Has Emails?').first().json;\nconst claudeResponse = $json;\n\n// Parse Claude's classification\nlet classification = {category: 'other', priority: 'normal', action: 'read', summary: 'No summary'};\ntry {\n  const text = claudeResponse.content[0].text;\n  const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) classification = JSON.parse(jsonMatch[0]);\n} catch (e) { /* use defaults */ }\n\nconst classifiedEmail = {\n  gmail_id: email.id,\n  from_email: email.from?.emailAddress || email.from || 'unknown@email.com',\n  from_name: email.from?.name || '',\n  to_email: email.to?.emailAddress || email.to || '',\n  subject: email.subject || 'No Subject',\n  snippet: email.snippet || '',\n  body: (email.textPlain || email.snippet || '').substring(0, 2000),\n  gmail_date: email.date || new Date().toISOString(),\n  ...classification\n};\n\nreturn {json: classifiedEmail};"
+      },
+      "id": "build-payload",
+      "name": "Build Triage Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.NEXT_PUBLIC_BASE_URL || 'https://void.insighter.digital' }}/api/gmail/triage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "x-triage-secret", "value": "={{ $env.GMAIL_TRIAGE_SECRET || '' }}"},
+            {"name": "content-type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "send-to-void",
+      "name": "Send to VOID Triage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1500, 200]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "markAsRead",
+        "messageId": "={{ $('Has Emails?').first().json.id }}"
+      },
+      "id": "mark-read",
+      "name": "Mark as Read",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1750, 200],
+      "credentials": {"gmailOAuth2": {"id": "gmail-oauth", "name": "Gmail OAuth2"}}
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {"main": [[{"node": "Fetch Unread Emails", "type": "main", "index": 0}]]},
+    "Fetch Unread Emails": {"main": [[{"node": "Has Emails?", "type": "main", "index": 0}]]},
+    "Has Emails?": {"main": [[{"node": "Claude Classify", "type": "main", "index": 0}], []]},
+    "Claude Classify": {"main": [[{"node": "Build Triage Payload", "type": "main", "index": 0}]]},
+    "Build Triage Payload": {"main": [[{"node": "Send to VOID Triage", "type": "main", "index": 0}]]},
+    "Send to VOID Triage": {"main": [[{"node": "Mark as Read", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true, "errorWorkflow": ""},
+  "versionId": "1",
+  "meta": {"instanceId": "void-automation"},
+  "tags": [{"name": "void-core"}, {"name": "gmail"}]
+}

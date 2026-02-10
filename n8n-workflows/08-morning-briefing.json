@@ -39,7 +39,20 @@
     },
     {
       "parameters": {
-        "jsCode": "const today = $('Read Today Note').first().json.data || 'No daily note yet';\nconst priorities = $('Read Priorities').first().json.data || 'No priorities set';\nconst date = $now.toFormat('cccc, LLLL d');\nconst time = $now.toFormat('h:mm a');\n\n// Extract tasks from today's note\nconst taskMatch = today.match(/## Tasks([\\s\\S]*?)(?=##|$)/);\nconst tasks = taskMatch ? taskMatch[1].trim() : 'No tasks';\n\nconst briefing = `☀️ **Morning Briefing**\\n📅 ${date}\\n\\n**Today's Tasks:**\\n${tasks}\\n\\n**Current Priorities:**\\n${priorities.substring(0, 500)}\\n\\n---\\nHave a productive day!`;\n\nreturn {json: {briefing, date}};"
+        "method": "GET",
+        "url": "={{ $env.NEXT_PUBLIC_BASE_URL || 'https://void.insighter.digital' }}/api/gmail/stats?days=1",
+        "options": {"timeout": 5000}
+      },
+      "id": "fetch-email-stats",
+      "name": "Fetch Email Stats",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 550],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = $('Read Today Note').first().json.data || 'No daily note yet';\nconst priorities = $('Read Priorities').first().json.data || 'No priorities set';\nconst date = $now.toFormat('cccc, LLLL d');\nconst time = $now.toFormat('h:mm a');\n\n// Extract tasks from today's note\nconst taskMatch = today.match(/## Tasks([\\s\\S]*?)(?=##|$)/);\nconst tasks = taskMatch ? taskMatch[1].trim() : 'No tasks';\n\n// Email summary\nlet emailSection = '';\ntry {\n  const stats = $('Fetch Email Stats').first().json;\n  if (stats && stats.total !== undefined) {\n    emailSection = `\\n\\n📧 **Email Summary:**\\n- ${stats.unread || 0} unread (${stats.byPriority?.urgent || 0} urgent)\\n- ${stats.pendingReply || 0} pending replies`;\n  }\n} catch (e) { /* no email stats */ }\n\nconst briefing = `☀️ **Morning Briefing**\\n📅 ${date}\\n\\n**Today's Tasks:**\\n${tasks}\\n\\n**Current Priorities:**\\n${priorities.substring(0, 500)}${emailSection}\\n\\n---\\nHave a productive day!`;\n\nreturn {json: {briefing, date}};"
       },
       "id": "compile-briefing",
       "name": "Compile Briefing",
@@ -62,9 +75,10 @@
     }
   ],
   "connections": {
-    "Daily 8AM Trigger": {"main": [[{"node": "Read Today Note", "type": "main", "index": 0}], [{"node": "Read Priorities", "type": "main", "index": 0}]]},
+    "Daily 8AM Trigger": {"main": [[{"node": "Read Today Note", "type": "main", "index": 0}], [{"node": "Read Priorities", "type": "main", "index": 0}], [{"node": "Fetch Email Stats", "type": "main", "index": 0}]]},
     "Read Today Note": {"main": [[{"node": "Compile Briefing", "type": "main", "index": 0}]]},
     "Read Priorities": {"main": [[{"node": "Compile Briefing", "type": "main", "index": 0}]]},
+    "Fetch Email Stats": {"main": [[{"node": "Compile Briefing", "type": "main", "index": 0}]]},
     "Compile Briefing": {"main": [[{"node": "Send Briefing", "type": "main", "index": 0}]]}
   },
   "active": false,

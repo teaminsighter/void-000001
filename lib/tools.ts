@@ -322,34 +322,105 @@ export const VOID_TOOLS: Tool[] = [
     },
   },
 
-  // ── External Integrations ──────────
+  // ── Gmail ─────────────────────────
   {
-    name: 'send_email',
-    description: 'Send or read email via workflow automation. Use when the user asks about email.',
+    name: 'gmail_inbox',
+    description: 'List recent emails from inbox with optional filters by category, priority, or status. Use when the user asks about their email, inbox, or wants to check mail.',
     input_schema: {
       type: 'object' as const,
       properties: {
-        action: {
+        category: {
           type: 'string',
-          enum: ['read', 'send', 'reply'],
-          description: 'Email action to perform',
+          enum: ['work', 'personal', 'finance', 'newsletter', 'spam', 'other'],
+          description: 'Filter by email category',
         },
-        to: {
+        priority: {
           type: 'string',
-          description: 'Recipient email address (for send/reply)',
+          enum: ['urgent', 'normal', 'low'],
+          description: 'Filter by priority level',
         },
-        subject: {
+        status: {
           type: 'string',
-          description: 'Email subject line',
+          enum: ['unread', 'read', 'replied', 'archived'],
+          description: 'Filter by email status',
         },
-        body: {
-          type: 'string',
-          description: 'Email body content',
+        limit: {
+          type: 'number',
+          description: 'Max emails to return (default: 10)',
         },
       },
-      required: ['action'],
     },
   },
+  {
+    name: 'gmail_read',
+    description: 'Read a specific email by searching subject or sender name. Returns full email content from vault.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search query — subject keywords, sender name, or email address',
+        },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'gmail_reply',
+    description: 'Send a reply to an email. IMPORTANT: Always show the draft reply to the user and ask for confirmation before calling this tool.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        gmail_id: {
+          type: 'string',
+          description: 'The Gmail ID of the email to reply to (from gmail_inbox or gmail_read results)',
+        },
+        reply_text: {
+          type: 'string',
+          description: 'The reply message body text',
+        },
+      },
+      required: ['gmail_id', 'reply_text'],
+    },
+  },
+  {
+    name: 'gmail_archive',
+    description: 'Archive emails matching a query. Use when the user wants to clean up their inbox.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search query to match emails to archive (subject, sender, etc.)',
+        },
+        archive_all: {
+          type: 'boolean',
+          description: 'Archive all matches (true) or just the first match (false, default)',
+        },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'gmail_search',
+    description: 'Search emails by keyword across subject, sender, and summary. Use when the user wants to find a specific email.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search keywords',
+        },
+        limit: {
+          type: 'number',
+          description: 'Max results (default: 10)',
+        },
+      },
+      required: ['query'],
+    },
+  },
+
+  // ── External Integrations ──────────
   {
     name: 'set_reminder',
     description: 'Set a reminder for a specific time. Triggers a notification workflow.',

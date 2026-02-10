@@ -3,7 +3,7 @@ import { jwtVerify } from 'jose';
 
 const COOKIE_NAME = 'void-session';
 
-const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout', '/api/telegram/webhook', '/api/discord/interactions'];
+const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout', '/api/telegram/webhook', '/api/discord/interactions', '/api/gmail/triage'];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'));

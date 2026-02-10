@@ -7,7 +7,8 @@ import { triggerWorkflow } from '@/lib/n8n';
 import { VOID_TOOLS } from '@/lib/tools';
 import { sendTelegramMessage } from '@/lib/telegram';
 import { sendDiscordDM } from '@/lib/discord';
-import { getContactByName, listContacts, getMessages as getDbMessages, addMessage as addDbMessage, createConversation, getConversation, getDiscordContactByName, listDiscordContacts } from '@/lib/db';
+import { getContactByName, listContacts, getMessages as getDbMessages, addMessage as addDbMessage, createConversation, getConversation, getDiscordContactByName, listDiscordContacts, getGmailEmails, getGmailEmailById, updateGmailEmailStatus, searchGmailEmails } from '@/lib/db';
+import { sendGmailReply, archiveGmailEmail } from '@/lib/gmail';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -328,16 +329,59 @@ Be realistic with time blocks. Include breaks.`;
         return { result: `Saved to vault: ${savedPath}`, success: true };
       }
 
-      // ── External Tools (n8n) ───────
-      case 'send_email': {
-        const result = await triggerWorkflow('email', input);
-        return {
-          result: result.success
-            ? `Email action "${input.action}" completed`
-            : `Email failed: ${result.error || 'unknown error'}`,
-          success: result.success,
-        };
+      // ── Gmail Tools ─────────────────
+      case 'gmail_inbox': {
+        const emails = getGmailEmails({
+          category: input.category as string | undefined,
+          priority: input.priority as string | undefined,
+          status: input.status as string | undefined,
+          limit: (input.limit as number) || 10,
+        });
+        if (!emails.length) return { result: 'No emails matching filters', success: true };
+        const emailList = emails.map(e =>
+          `${e.priority === 'urgent' ? '🔴' : e.priority === 'normal' ? '🟡' : '⚪'} [${e.category}] ${e.from_name || e.from_email}: ${e.subject}\n  → ${e.summary} (${e.status}) [id: ${e.gmail_id}]`
+        ).join('\n\n');
+        return { result: `${emails.length} email(s):\n\n${emailList}`, success: true };
       }
+      case 'gmail_read': {
+        const emails = searchGmailEmails(input.query as string);
+        if (!emails.length) return { result: `No email matching "${input.query}"`, success: false };
+        const e = emails[0];
+        let body = e.body_preview;
+        if (e.vault_path) {
+          try { body = await readFile(e.vault_path); } catch { /* use preview */ }
+        }
+        if (e.status === 'unread') updateGmailEmailStatus(e.gmail_id, 'read');
+        return { result: `From: ${e.from_name} <${e.from_email}>\nSubject: ${e.subject}\nDate: ${e.gmail_date}\nCategory: ${e.category} | Priority: ${e.priority}\nGmail ID: ${e.gmail_id}\n\n${body}`, success: true };
+      }
+      case 'gmail_reply': {
+        const email = getGmailEmailById(input.gmail_id as string);
+        if (!email) return { result: 'Email not found by that ID', success: false };
+        const sent = await sendGmailReply(email.from_email, `Re: ${email.subject}`, input.reply_text as string, email.gmail_id);
+        if (sent) updateGmailEmailStatus(email.gmail_id, 'replied');
+        return { result: sent ? `Reply sent to ${email.from_name || email.from_email}` : 'Failed to send reply via n8n', success: sent };
+      }
+      case 'gmail_archive': {
+        const emails = searchGmailEmails(input.query as string);
+        if (!emails.length) return { result: `No emails matching "${input.query}"`, success: false };
+        const toArchive = (input.archive_all as boolean) ? emails : [emails[0]];
+        let archivedCount = 0;
+        for (const e of toArchive) {
+          const ok = await archiveGmailEmail(e.gmail_id);
+          if (ok) { updateGmailEmailStatus(e.gmail_id, 'archived'); archivedCount++; }
+        }
+        return { result: `Archived ${archivedCount} email(s)`, success: archivedCount > 0 };
+      }
+      case 'gmail_search': {
+        const emails = searchGmailEmails(input.query as string, (input.limit as number) || 10);
+        if (!emails.length) return { result: `No emails matching "${input.query}"`, success: true };
+        const resultList = emails.map(e =>
+          `${e.from_name || e.from_email}: ${e.subject}\n  ${e.summary} [${e.category}/${e.priority}] [id: ${e.gmail_id}]`
+        ).join('\n\n');
+        return { result: `${emails.length} result(s):\n\n${resultList}`, success: true };
+      }
+
+      // ── External Tools (n8n) ───────
 
       case 'set_reminder': {
         const result = await triggerWorkflow('remind', input);

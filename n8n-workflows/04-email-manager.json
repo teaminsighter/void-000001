@@ -17,32 +17,38 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
-          "conditions": [
-            {
-              "id": "read-condition",
-              "leftValue": "={{ $json.body.action }}",
-              "rightValue": "read",
-              "operator": {"type": "string", "operation": "equals"}
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
+        "jsCode": "const action = $json.body?.action || $json.action || 'read';\nreturn {json: {...$json, _action: action}};"
       },
-      "id": "check-action",
-      "name": "Check Action",
-      "type": "n8n-nodes-base.if",
+      "id": "extract-action",
+      "name": "Extract Action",
+      "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {"conditions": {"conditions": [{"leftValue": "={{ $json._action }}", "rightValue": "read", "operator": {"type": "string", "operation": "equals"}}]}, "renameOutput": true, "outputLabel": "Read"},
+            {"conditions": {"conditions": [{"leftValue": "={{ $json._action }}", "rightValue": "send", "operator": {"type": "string", "operation": "equals"}}]}, "renameOutput": true, "outputLabel": "Send"},
+            {"conditions": {"conditions": [{"leftValue": "={{ $json._action }}", "rightValue": "archive", "operator": {"type": "string", "operation": "equals"}}]}, "renameOutput": true, "outputLabel": "Archive"},
+            {"conditions": {"conditions": [{"leftValue": "={{ $json._action }}", "rightValue": "search", "operator": {"type": "string", "operation": "equals"}}]}, "renameOutput": true, "outputLabel": "Search"}
+          ]
+        },
+        "options": {"fallbackOutput": "none"}
+      },
+      "id": "route-action",
+      "name": "Route Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [750, 300]
     },
     {
       "parameters": {
         "resource": "message",
         "operation": "getAll",
         "returnAll": false,
-        "limit": 10,
+        "limit": "={{ $('Webhook Trigger').first().json.body?.limit || 10 }}",
         "filters": {"q": "is:unread", "labelIds": ["INBOX"]},
         "options": {}
       },
@@ -50,7 +56,7 @@
       "name": "Gmail - Read Inbox",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
-      "position": [750, 200],
+      "position": [1000, 100],
       "credentials": {"gmailOAuth2": {"id": "gmail-oauth", "name": "Gmail OAuth2"}}
     },
     {
@@ -67,18 +73,48 @@
       "name": "Gmail - Send Email",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
-      "position": [750, 400],
+      "position": [1000, 300],
       "credentials": {"gmailOAuth2": {"id": "gmail-oauth", "name": "Gmail OAuth2"}}
     },
     {
       "parameters": {
-        "jsCode": "const emails = $input.all();\nconst formatted = emails.map(e => ({\n  id: e.json.id,\n  from: e.json.from?.emailAddress || e.json.from || 'Unknown',\n  subject: e.json.subject || 'No Subject',\n  snippet: e.json.snippet || '',\n  date: e.json.date || e.json.internalDate,\n  unread: e.json.labelIds?.includes('UNREAD') || false\n}));\n\nreturn {json: {action: 'read', count: formatted.length, emails: formatted}};"
+        "resource": "message",
+        "operation": "addLabels",
+        "messageId": "={{ $('Webhook Trigger').first().json.body.gmailId }}",
+        "labelIds": ["TRASH"]
+      },
+      "id": "gmail-archive",
+      "name": "Gmail - Archive",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1000, 500],
+      "credentials": {"gmailOAuth2": {"id": "gmail-oauth", "name": "Gmail OAuth2"}}
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 10,
+        "filters": {"q": "={{ $('Webhook Trigger').first().json.body.query }}"},
+        "options": {}
+      },
+      "id": "gmail-search",
+      "name": "Gmail - Search",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1000, 700],
+      "credentials": {"gmailOAuth2": {"id": "gmail-oauth", "name": "Gmail OAuth2"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "const emails = $input.all();\nconst formatted = emails.map(e => ({\n  id: e.json.id,\n  from: e.json.from?.emailAddress || e.json.from || 'Unknown',\n  from_name: e.json.from?.name || '',\n  subject: e.json.subject || 'No Subject',\n  snippet: e.json.snippet || '',\n  date: e.json.date || e.json.internalDate,\n  unread: e.json.labelIds?.includes('UNREAD') || false\n}));\nreturn {json: {action: 'read', count: formatted.length, emails: formatted}};"
       },
       "id": "format-read",
       "name": "Format Read Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1000, 200]
+      "position": [1250, 100]
     },
     {
       "parameters": {
@@ -88,7 +124,27 @@
       "name": "Format Send Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1000, 400]
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "return {json: {action: 'archive', success: true, gmailId: $('Webhook Trigger').first().json.body.gmailId}};"
+      },
+      "id": "format-archive",
+      "name": "Format Archive Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const emails = $input.all();\nconst formatted = emails.map(e => ({\n  id: e.json.id,\n  from: e.json.from?.emailAddress || e.json.from || 'Unknown',\n  from_name: e.json.from?.name || '',\n  subject: e.json.subject || 'No Subject',\n  snippet: e.json.snippet || '',\n  date: e.json.date || e.json.internalDate\n}));\nreturn {json: {action: 'search', count: formatted.length, emails: formatted}};"
+      },
+      "id": "format-search",
+      "name": "Format Search Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 700]
     },
     {
       "parameters": {"respondWith": "json", "responseBody": "={{ JSON.stringify($json) }}", "options": {}},
@@ -96,7 +152,7 @@
       "name": "Respond - Read",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1250, 200]
+      "position": [1500, 100]
     },
     {
       "parameters": {"respondWith": "json", "responseBody": "={{ JSON.stringify($json) }}", "options": {}},
@@ -104,20 +160,46 @@
       "name": "Respond - Send",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1250, 400]
+      "position": [1500, 300]
+    },
+    {
+      "parameters": {"respondWith": "json", "responseBody": "={{ JSON.stringify($json) }}", "options": {}},
+      "id": "respond-archive",
+      "name": "Respond - Archive",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1500, 500]
+    },
+    {
+      "parameters": {"respondWith": "json", "responseBody": "={{ JSON.stringify($json) }}", "options": {}},
+      "id": "respond-search",
+      "name": "Respond - Search",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1500, 700]
     }
   ],
   "connections": {
-    "Webhook Trigger": {"main": [[{"node": "Check Action", "type": "main", "index": 0}]]},
-    "Check Action": {"main": [[{"node": "Gmail - Read Inbox", "type": "main", "index": 0}], [{"node": "Gmail - Send Email", "type": "main", "index": 0}]]},
+    "Webhook Trigger": {"main": [[{"node": "Extract Action", "type": "main", "index": 0}]]},
+    "Extract Action": {"main": [[{"node": "Route Action", "type": "main", "index": 0}]]},
+    "Route Action": {"main": [
+      [{"node": "Gmail - Read Inbox", "type": "main", "index": 0}],
+      [{"node": "Gmail - Send Email", "type": "main", "index": 0}],
+      [{"node": "Gmail - Archive", "type": "main", "index": 0}],
+      [{"node": "Gmail - Search", "type": "main", "index": 0}]
+    ]},
     "Gmail - Read Inbox": {"main": [[{"node": "Format Read Response", "type": "main", "index": 0}]]},
     "Gmail - Send Email": {"main": [[{"node": "Format Send Response", "type": "main", "index": 0}]]},
+    "Gmail - Archive": {"main": [[{"node": "Format Archive Response", "type": "main", "index": 0}]]},
+    "Gmail - Search": {"main": [[{"node": "Format Search Response", "type": "main", "index": 0}]]},
     "Format Read Response": {"main": [[{"node": "Respond - Read", "type": "main", "index": 0}]]},
-    "Format Send Response": {"main": [[{"node": "Respond - Send", "type": "main", "index": 0}]]}
+    "Format Send Response": {"main": [[{"node": "Respond - Send", "type": "main", "index": 0}]]},
+    "Format Archive Response": {"main": [[{"node": "Respond - Archive", "type": "main", "index": 0}]]},
+    "Format Search Response": {"main": [[{"node": "Respond - Search", "type": "main", "index": 0}]]}
   },
   "active": false,
   "settings": {"executionOrder": "v1", "saveManualExecutions": true},
-  "versionId": "1",
+  "versionId": "2",
   "meta": {"instanceId": "void-automation"},
-  "tags": [{"name": "void-core"}]
+  "tags": [{"name": "void-core"}, {"name": "gmail"}]
 }

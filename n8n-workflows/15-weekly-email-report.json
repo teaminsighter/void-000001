@@ -1,0 +1,103 @@
+{
+  "name": "Weekly Email Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "cronExpression", "expression": "0 21 * * 0"}]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Sunday 9PM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.NEXT_PUBLIC_BASE_URL || 'https://void.insighter.digital' }}/api/gmail/stats?days=7",
+        "options": {}
+      },
+      "id": "fetch-stats",
+      "name": "Fetch Email Stats",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "anthropic-version", "value": "2023-06-01"},
+            {"name": "content-type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 800,\n  \"messages\": [{\n    \"role\": \"user\",\n    \"content\": \"Generate a concise weekly email report from this data. Use emoji for visual scanning. Include: total emails, breakdown by category and priority, pending replies, top senders, and one actionable suggestion.\\n\\nStats:\\n{{ JSON.stringify($json) }}\"\n  }]\n}",
+        "options": {}
+      },
+      "id": "claude-report",
+      "name": "Claude Generate Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [750, 300],
+      "credentials": {"httpHeaderAuth": {"id": "anthropic-key", "name": "Anthropic API Key"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "const report = $json.content[0].text;\nconst date = $now.toFormat('yyyy-MM-dd');\n\nreturn {json: {report, date, filename: `06-Reviews/email-week-${date}.md`}};"
+      },
+      "id": "format-report",
+      "name": "Format Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.NEXT_PUBLIC_BASE_URL || 'https://void.insighter.digital' }}/api/vault/write",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({path: $json.filename, content: $json.report, mode: 'overwrite'}) }}",
+        "options": {}
+      },
+      "id": "save-vault",
+      "name": "Save to Vault",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=📊 **Weekly Email Report**\n\n{{ $json.report.substring(0, 4000) }}",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "send-telegram",
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1250, 400],
+      "credentials": {"telegramApi": {"id": "telegram-bot", "name": "Telegram Bot"}}
+    }
+  ],
+  "connections": {
+    "Sunday 9PM Trigger": {"main": [[{"node": "Fetch Email Stats", "type": "main", "index": 0}]]},
+    "Fetch Email Stats": {"main": [[{"node": "Claude Generate Report", "type": "main", "index": 0}]]},
+    "Claude Generate Report": {"main": [[{"node": "Format Report", "type": "main", "index": 0}]]},
+    "Format Report": {"main": [[{"node": "Save to Vault", "type": "main", "index": 0}], [{"node": "Send to Telegram", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true},
+  "versionId": "1",
+  "meta": {"instanceId": "void-automation"},
+  "tags": [{"name": "void-core"}, {"name": "gmail"}]
+}
