@@ -46,6 +46,7 @@ export async function triggerWorkflow(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(transformedPayload),
+      signal: AbortSignal.timeout(15_000),
     });
 
     if (!response.ok) {
@@ -76,7 +77,9 @@ export async function triggerWorkflow(
  */
 export async function health(): Promise<{ status: string; workflows?: number }> {
   try {
-    const response = await fetch(`${N8N_BASE}/health-check`);
+    const response = await fetch(`${N8N_BASE}/health-check`, {
+      signal: AbortSignal.timeout(5_000),
+    });
     if (response.ok) {
       const data = await response.json();
       return {

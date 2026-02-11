@@ -29,6 +29,7 @@ export interface Message {
   timestamp: Date;
   actions?: ToolAction[];
   attachments?: Attachment[];
+  unsaved?: boolean;
 }
 
 export interface ChatState {
@@ -165,6 +166,26 @@ export interface PageConfig {
   path: string;
   icon: string;
   label: string;
+}
+
+// Graph types
+export interface GraphNode {
+  id: string;
+  name: string;
+  folder: string;
+  type: 'file' | 'folder';
+  val: number;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+  type: 'wiki-link' | 'folder';
+}
+
+export interface GraphData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
 }
 
 export const PAGES: PageConfig[] = [

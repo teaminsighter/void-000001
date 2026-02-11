@@ -65,15 +65,31 @@ export default function ChatPanel({
   const persistMessage = async (
     convId: string,
     msg: { id: string; role: "user" | "assistant"; content: string }
-  ) => {
-    try {
-      await fetch(`/api/conversations/${convId}/messages`, {
+  ): Promise<boolean> => {
+    const attempt = async () => {
+      const res = await fetch(`/api/conversations/${convId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(msg),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    };
+
+    try {
+      await attempt();
+      return true;
     } catch (err) {
-      console.error("Failed to persist message:", err);
+      console.error("Failed to persist message, retrying:", err);
+      try {
+        await attempt();
+        return true;
+      } catch (retryErr) {
+        console.error("Retry failed, message unsaved:", retryErr);
+        setMessages((prev) =>
+          prev.map((m) => (m.id === msg.id ? { ...m, unsaved: true } : m))
+        );
+        return false;
+      }
     }
   };
 
@@ -136,6 +152,7 @@ export default function ChatPanel({
 
       // Try streaming first
       let streamed = false;
+      let streamingStarted = false;
       try {
         const response = await fetch("/api/chat-stream", {
           method: "POST",
@@ -174,6 +191,7 @@ export default function ChatPanel({
                 try {
                   const data = JSON.parse(line.slice(6));
                   if (eventType === "token") {
+                    if (!streamingStarted) streamingStarted = true;
                     streamedText += data.text;
                     setMessages((prev) =>
                       prev.map((m) =>
@@ -235,8 +253,20 @@ export default function ChatPanel({
             content: streamedText || "...",
           });
         }
-      } catch {
-        // Stream failed, fall through to non-streaming
+      } catch (streamErr) {
+        if (streamingStarted) {
+          // Stream broke after tokens were received — mark as incomplete, don't duplicate via non-streaming
+          streamed = true;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === aiMessageId
+                ? { ...m, content: m.content + "\n\n[Response interrupted — connection lost]" }
+                : m
+            )
+          );
+          console.error("Stream broke mid-response:", streamErr);
+        }
+        // If streaming never started, fall through to non-streaming
       }
 
       // Fallback to non-streaming
@@ -493,8 +523,7 @@ export default function ChatPanel({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Tell your agent what to do..."
-            disabled={isLoading}
+            placeholder={isLoading ? "Waiting for response..." : "Tell your agent what to do..."}
             autoFocus
             className="flex-1 outline-none"
             style={{
@@ -505,7 +534,6 @@ export default function ChatPanel({
               color: "var(--void-white)",
               fontSize: 13,
               fontFamily: "inherit",
-              opacity: isLoading ? 0.5 : 1,
             }}
           />
           <VoiceButton

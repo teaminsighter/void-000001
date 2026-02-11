@@ -35,11 +35,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Verify JWT
+  // Verify JWT — require VOID_JWT_SECRET in production
   try {
-    const secret = new TextEncoder().encode(
-      process.env.VOID_JWT_SECRET || 'fallback-secret-change-me'
-    );
+    const jwtSecret = process.env.VOID_JWT_SECRET;
+    if (!jwtSecret) {
+      console.error('[Auth] VOID_JWT_SECRET is not set — rejecting request');
+      const response = NextResponse.redirect(new URL('/login', request.url));
+      response.cookies.set(COOKIE_NAME, '', { maxAge: 0, path: '/' });
+      return response;
+    }
+    const secret = new TextEncoder().encode(jwtSecret);
     await jwtVerify(token, secret);
     return NextResponse.next();
   } catch {

@@ -1,8 +1,12 @@
 import { SignJWT, jwtVerify } from 'jose';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.VOID_JWT_SECRET || 'fallback-secret-change-me'
-);
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.VOID_JWT_SECRET;
+  if (!secret) {
+    throw new Error('VOID_JWT_SECRET is not set — cannot sign or verify tokens');
+  }
+  return new TextEncoder().encode(secret);
+}
 
 const COOKIE_NAME = 'void-session';
 
@@ -11,12 +15,12 @@ export async function signToken(): Promise<string> {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
-    .sign(JWT_SECRET);
+    .sign(getJwtSecret());
 }
 
 export async function verifyToken(token: string): Promise<boolean> {
   try {
-    await jwtVerify(token, JWT_SECRET);
+    await jwtVerify(token, getJwtSecret());
     return true;
   } catch {
     return false;

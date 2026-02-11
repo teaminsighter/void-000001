@@ -74,6 +74,7 @@ export async function sendDiscordMessage(channelId: string, text: string): Promi
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ content: chunk }),
+        signal: AbortSignal.timeout(10_000),
       });
       if (!response.ok) {
         console.error('[Discord] Send error:', response.status, await response.text());
@@ -102,6 +103,7 @@ export async function createDMChannel(userId: string): Promise<string | null> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ recipient_id: userId }),
+      signal: AbortSignal.timeout(10_000),
     });
     if (!response.ok) return null;
     const data = await response.json();
@@ -137,6 +139,7 @@ export async function editInteractionResponse(interactionToken: string, content:
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: truncated }),
+        signal: AbortSignal.timeout(10_000),
       },
     );
     if (!response.ok) {
@@ -180,6 +183,7 @@ export async function registerSlashCommand(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ name, description, options }),
+        signal: AbortSignal.timeout(10_000),
       },
     );
     const data = await response.json();

@@ -47,15 +47,24 @@ export async function sendTelegramMessage(chatId: string, text: string): Promise
           text: chunk,
           parse_mode: 'Markdown',
         }),
+        signal: AbortSignal.timeout(10_000),
       });
 
       if (!response.ok) {
-        // Retry without Markdown if parse fails
-        await fetch(`${TELEGRAM_API}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: chatId, text: chunk }),
-        });
+        const status = response.status;
+        // Only retry without markdown for 400 errors (likely parse errors)
+        // Don't retry on 429 (rate limit) or 5xx (server errors)
+        if (status === 400) {
+          await fetch(`${TELEGRAM_API}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: chatId, text: chunk }),
+            signal: AbortSignal.timeout(10_000),
+          });
+        } else {
+          console.error(`[Telegram] Send failed with status ${status}`);
+          return false;
+        }
       }
     } catch (err) {
       console.error('[Telegram] Send error:', err);
@@ -76,6 +85,7 @@ export async function sendTypingAction(chatId: string): Promise<void> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id: chatId, action: 'typing' }),
+      signal: AbortSignal.timeout(10_000),
     });
   } catch {
     // non-critical, ignore
@@ -90,14 +100,18 @@ export async function downloadTelegramFile(fileId: string): Promise<Buffer | nul
 
   try {
     // Get file path
-    const fileResponse = await fetch(`${TELEGRAM_API}/getFile?file_id=${fileId}`);
+    const fileResponse = await fetch(`${TELEGRAM_API}/getFile?file_id=${fileId}`, {
+      signal: AbortSignal.timeout(10_000),
+    });
     const fileData = await fileResponse.json();
 
     if (!fileData.ok || !fileData.result?.file_path) return null;
 
     // Download file
     const downloadUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${fileData.result.file_path}`;
-    const response = await fetch(downloadUrl);
+    const response = await fetch(downloadUrl, {
+      signal: AbortSignal.timeout(10_000),
+    });
     const buffer = Buffer.from(await response.arrayBuffer());
 
     return buffer;
@@ -120,6 +134,7 @@ export async function setWebhook(url: string): Promise<{ success: boolean; messa
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),
+      signal: AbortSignal.timeout(10_000),
     });
 
     const data = await response.json();

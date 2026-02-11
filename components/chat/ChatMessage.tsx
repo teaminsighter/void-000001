@@ -90,6 +90,19 @@ export default function ChatMessage({ message }: ChatMessageProps) {
           {message.content}
         </div>
 
+        {/* Unsaved indicator */}
+        {message.unsaved && (
+          <div
+            style={{
+              marginTop: 4,
+              fontSize: 10,
+              color: "rgba(245, 158, 11, 0.7)",
+            }}
+          >
+            Not saved — will be lost on reload
+          </div>
+        )}
+
         {/* Speak button for assistant messages */}
         {!isUser && (
           <div style={{ marginTop: 4, display: "flex", justifyContent: "flex-end" }}>
