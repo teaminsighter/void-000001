@@ -381,6 +381,24 @@ async function executeTool(
         return { result: `Web results for "${input.query}" (${searchRes.count}):\n\n${resultList}`, success: true };
       }
 
+      // ── Dashboard Display ─────────────
+      case 'display_set': {
+        const displayPath = path.join(process.cwd(), 'data', 'agent-display.json');
+        const dataDir = path.join(process.cwd(), 'data');
+        try { await fs.access(dataDir); } catch { await fs.mkdir(dataDir, { recursive: true }); }
+        const content = {
+          type: input.type as string,
+          title: input.title as string | undefined,
+          content: input.content as string | undefined,
+          author: input.author as string | undefined,
+          imageUrl: input.imageUrl as string | undefined,
+          updatedAt: new Date().toISOString(),
+        };
+        await fs.writeFile(displayPath, JSON.stringify(content, null, 2));
+        const typeLabel = input.type === 'quote' || input.type === 'motivation' ? 'quote' : input.type;
+        return { result: `Dashboard display updated: ${typeLabel}${input.title ? ` - "${input.title}"` : ''}`, success: true };
+      }
+
       default:
         return { result: `Unknown tool: ${name}`, success: false };
     }
@@ -407,8 +425,8 @@ export async function POST(request: NextRequest) {
     const searchResults = await search(message);
     const context = buildContext(searchResults.results);
 
-    // 2. Build system prompt
-    const systemPrompt = buildPrompt(context);
+    // 2. Build system prompt (loads core memory + search context)
+    const systemPrompt = await buildPrompt(context);
 
     // 3. Prepare messages
     const messages: ChatMessage[] = [...history, { role: 'user', content: message }];

@@ -7,6 +7,7 @@ import Topbar from "./Topbar";
 import CommandPalette from "./CommandPalette";
 import { AgentRightPanel } from "@/components/agent";
 import { HomeRightPanel } from "@/components/dashboard";
+import { VaultRightPanel } from "@/components/vault";
 import { useKeyboard } from "@/hooks/useKeyboard";
 import { useTheme } from "@/hooks/useTheme";
 
@@ -44,7 +45,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const { isCommandPaletteOpen, setCommandPaletteOpen } = useKeyboard();
   const { theme, toggle: toggleTheme } = useTheme();
   const pathname = usePathname();
-  const showRightPanel = pathname === "/agent" || pathname === "/";
+  const showRightPanel = pathname === "/agent" || pathname === "/" || pathname === "/vault";
 
   return (
     <div
@@ -75,8 +76,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <aside
               className="overflow-y-auto border-l"
               style={{
-                width: 300,
-                minWidth: 300,
+                flex: pathname === "/vault" || pathname === "/" ? "0 0 33%" : undefined,
+                width: pathname === "/vault" || pathname === "/" ? undefined : 300,
+                minWidth: pathname === "/vault" || pathname === "/" ? 280 : 300,
+                maxWidth: pathname === "/vault" || pathname === "/" ? 480 : 300,
                 borderColor: "var(--void-border)",
                 background: "var(--void-bg)",
               }}
@@ -85,6 +88,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 <Suspense>
                   <AgentRightPanelWrapper />
                 </Suspense>
+              ) : pathname === "/vault" ? (
+                <VaultRightPanel />
               ) : (
                 <HomeRightPanel />
               )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   StatCard,
@@ -12,26 +12,45 @@ import { TODAY, getGreeting } from "@/lib/mock-data";
 import { Task, VaultFile } from "@/lib/types";
 import { onDataChanged } from "@/lib/events";
 
+interface LogEntry {
+  id: string;
+  timestamp: Date;
+  type: "info" | "success" | "warning" | "error";
+  message: string;
+}
+
 export default function HomePage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [vaultFiles, setVaultFiles] = useState<VaultFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+
+  const addLog = useCallback((type: LogEntry["type"], message: string) => {
+    setLogs((prev) => [
+      ...prev.slice(-49),
+      { id: crypto.randomUUID(), timestamp: new Date(), type, message },
+    ]);
+  }, []);
 
   const loadDashboardData = useCallback(async () => {
     try {
+      addLog("info", "Loading dashboard data...");
       const plannerRes = await fetch("/api/planner");
       const plannerData = await plannerRes.json();
       setTasks(plannerData.tasks || []);
+      addLog("success", `Loaded ${plannerData.tasks?.length || 0} tasks`);
 
       const vaultRes = await fetch("/api/vault/list");
       const vaultData = await vaultRes.json();
       setVaultFiles(vaultData.files || []);
+      addLog("success", `Loaded ${vaultData.files?.length || 0} vault files`);
     } catch (error) {
       console.error("Failed to load dashboard data:", error);
+      addLog("error", "Failed to load dashboard data");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [addLog]);
 
   useEffect(() => {
     loadDashboardData();
@@ -184,6 +203,9 @@ export default function HomePage() {
           </div>
         </WidgetCard>
       </div>
+
+      {/* Log Box */}
+      <LogBox logs={logs} onClear={() => setLogs([])} />
     </div>
   );
 }
@@ -232,6 +254,122 @@ function WidgetCard({
       </div>
       <div className="flex flex-col" style={{ flex: 1 }}>
         {children}
+      </div>
+    </div>
+  );
+}
+
+function LogBox({
+  logs,
+  onClear,
+}: {
+  logs: LogEntry[];
+  onClear: () => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [logs]);
+
+  const getTypeColor = (type: LogEntry["type"]) => {
+    switch (type) {
+      case "success": return "#34d399";
+      case "warning": return "#f59e0b";
+      case "error": return "#ef4444";
+      default: return "var(--void-dim)";
+    }
+  };
+
+  const getTypeLabel = (type: LogEntry["type"]) => {
+    switch (type) {
+      case "success": return "OK";
+      case "warning": return "WARN";
+      case "error": return "ERR";
+      default: return "INFO";
+    }
+  };
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString("en-US", {
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  };
+
+  return (
+    <div
+      className="mt-5 rounded-lg overflow-hidden"
+      style={{
+        background: "var(--void-surface)",
+        border: "1px solid var(--void-border)",
+      }}
+    >
+      <div
+        className="flex justify-between items-center border-b"
+        style={{
+          padding: "10px 16px",
+          borderColor: "var(--void-border)",
+        }}
+      >
+        <span
+          className="text-xs font-semibold font-mono"
+          style={{ color: "var(--void-white)" }}
+        >
+          System Log
+        </span>
+        <button
+          onClick={onClear}
+          className="text-[10px] transition-colors"
+          style={{
+            color: "var(--void-dim)",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          Clear
+        </button>
+      </div>
+      <div
+        ref={scrollRef}
+        className="font-mono text-[11px] overflow-y-auto"
+        style={{
+          height: 140,
+          padding: "8px 12px",
+          background: "var(--void-bg)",
+        }}
+      >
+        {logs.length === 0 ? (
+          <div style={{ color: "var(--void-dim)", padding: "8px 0" }}>
+            No logs yet...
+          </div>
+        ) : (
+          logs.map((log) => (
+            <div
+              key={log.id}
+              className="flex gap-2"
+              style={{ padding: "2px 0" }}
+            >
+              <span style={{ color: "var(--void-dim)" }}>
+                {formatTime(log.timestamp)}
+              </span>
+              <span
+                style={{
+                  color: getTypeColor(log.type),
+                  minWidth: 36,
+                }}
+              >
+                [{getTypeLabel(log.type)}]
+              </span>
+              <span style={{ color: "var(--void-text)" }}>{log.message}</span>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

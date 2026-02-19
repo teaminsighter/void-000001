@@ -581,6 +581,39 @@ export const VOID_TOOLS: Tool[] = [
     },
   },
 
+  // ── Dashboard Display ─────────────────
+  {
+    name: 'display_set',
+    description: 'Display content on the dashboard right panel. Use when the user asks to show a quote, motivation, image, note, or graph on the dashboard.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['quote', 'motivation', 'image', 'note', 'graph', 'empty'],
+          description: 'Type of content to display',
+        },
+        title: {
+          type: 'string',
+          description: 'Title or label for the display (e.g. "Daily Wisdom", "Today\'s Focus")',
+        },
+        content: {
+          type: 'string',
+          description: 'The main text content (quote text, note content, etc.)',
+        },
+        author: {
+          type: 'string',
+          description: 'Author attribution for quotes',
+        },
+        imageUrl: {
+          type: 'string',
+          description: 'URL for image display type',
+        },
+      },
+      required: ['type'],
+    },
+  },
+
   // ── Web Tools ─────────────────────────
   {
     name: 'web_fetch',
