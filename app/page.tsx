@@ -8,6 +8,7 @@ import {
   VaultRecent,
   QuickActions,
 } from "@/components/dashboard";
+import { VoiceButton, speakText } from "@/components/voice";
 import { TODAY, getGreeting } from "@/lib/mock-data";
 import { Task, VaultFile } from "@/lib/types";
 import { onDataChanged } from "@/lib/events";
@@ -24,6 +25,7 @@ export default function HomePage() {
   const [vaultFiles, setVaultFiles] = useState<VaultFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [voiceResponse, setVoiceResponse] = useState<string>("");
 
   const addLog = useCallback((type: LogEntry["type"], message: string) => {
     setLogs((prev) => [
@@ -52,6 +54,38 @@ export default function HomePage() {
     }
   }, [addLog]);
 
+  // Handle voice commands
+  const handleVoiceCommand = useCallback(async (transcript: string) => {
+    addLog("info", `Voice: "${transcript}"`);
+
+    try {
+      // Send to chat API
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: transcript, history: [] }),
+      });
+
+      if (!response.ok) throw new Error("Chat API failed");
+
+      const data = await response.json();
+      const responseText = data.response || data.message || "Command processed";
+
+      setVoiceResponse(responseText);
+      addLog("success", `Agent: ${responseText.slice(0, 50)}...`);
+
+      // Speak the response
+      await speakText(responseText);
+
+      // Refresh dashboard data if agent made changes
+      loadDashboardData();
+    } catch (error) {
+      console.error("Voice command error:", error);
+      addLog("error", "Failed to process voice command");
+      await speakText("Sorry, I couldn't process that command.");
+    }
+  }, [addLog, loadDashboardData]);
+
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
@@ -74,27 +108,45 @@ export default function HomePage() {
 
   return (
     <div className="p-6 animate-fadeIn">
-      {/* Greeting */}
-      <div className="mb-6">
-        <div
-          className="font-mono text-[10px] font-medium tracking-wider uppercase"
-          style={{ color: "var(--void-dim)" }}
-        >
-          {TODAY}
+      {/* Greeting with Voice Button */}
+      <div className="mb-6 flex justify-between items-start">
+        <div>
+          <div
+            className="font-mono text-[10px] font-medium tracking-wider uppercase"
+            style={{ color: "var(--void-dim)" }}
+          >
+            {TODAY}
+          </div>
+          <div
+            className="text-2xl font-bold mt-1"
+            style={{ color: "var(--void-white)" }}
+          >
+            {getGreeting()}, boss.
+          </div>
+          <div
+            className="text-[13px] mt-0.5"
+            style={{ color: "var(--void-muted)" }}
+          >
+            {isLoading
+              ? "Loading..."
+              : `${highPriorityTasks} urgent tasks · ${vaultFiles.length} vault notes`}
+          </div>
         </div>
-        <div
-          className="text-2xl font-bold mt-1"
-          style={{ color: "var(--void-white)" }}
-        >
-          {getGreeting()}, boss.
-        </div>
-        <div
-          className="text-[13px] mt-0.5"
-          style={{ color: "var(--void-muted)" }}
-        >
-          {isLoading
-            ? "Loading..."
-            : `${highPriorityTasks} urgent tasks · ${vaultFiles.length} vault notes`}
+
+        {/* Voice Command Button */}
+        <div className="flex flex-col items-center">
+          <VoiceButton
+            onTranscript={handleVoiceCommand}
+            size="md"
+            showTranscript={false}
+            speakResponse={false}
+          />
+          <div
+            className="mt-1 text-[9px] text-center"
+            style={{ color: "var(--void-faint)" }}
+          >
+            Voice
+          </div>
         </div>
       </div>
 
