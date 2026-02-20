@@ -1,0 +1,21 @@
+# ══════════════════════════════════════
+# VOID — Nixpacks Configuration
+# For Coolify deployment
+# ══════════════════════════════════════
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "python3", "gcc", "gnumake"]
+aptPkgs = ["python3", "make", "g++", "build-essential"]
+
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "npm run start"
+
+[variables]
+NODE_ENV = "production"
+NEXT_TELEMETRY_DISABLED = "1"
