@@ -8,7 +8,7 @@ import {
   VaultRecent,
   QuickActions,
 } from "@/components/dashboard";
-import { VoiceButton, speakText } from "@/components/voice";
+import { ContinuousVoice } from "@/components/voice";
 import { TODAY, getGreeting } from "@/lib/mock-data";
 import { Task, VaultFile } from "@/lib/types";
 import { onDataChanged } from "@/lib/events";
@@ -54,8 +54,8 @@ export default function HomePage() {
     }
   }, [addLog]);
 
-  // Handle voice commands
-  const handleVoiceCommand = useCallback(async (transcript: string) => {
+  // Handle voice commands - returns response text for TTS
+  const handleVoiceCommand = useCallback(async (transcript: string): Promise<string> => {
     addLog("info", `Voice: "${transcript}"`);
 
     try {
@@ -74,15 +74,14 @@ export default function HomePage() {
       setVoiceResponse(responseText);
       addLog("success", `Agent: ${responseText.slice(0, 50)}...`);
 
-      // Speak the response
-      await speakText(responseText);
-
       // Refresh dashboard data if agent made changes
       loadDashboardData();
+
+      return responseText;
     } catch (error) {
       console.error("Voice command error:", error);
       addLog("error", "Failed to process voice command");
-      await speakText("Sorry, I couldn't process that command.");
+      return "Sorry, I couldn't process that command.";
     }
   }, [addLog, loadDashboardData]);
 
@@ -133,20 +132,13 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Voice Command Button */}
-        <div className="flex flex-col items-center">
-          <VoiceButton
-            onTranscript={handleVoiceCommand}
-            size="md"
-            showTranscript={false}
-            speakResponse={false}
+        {/* Voice Command - Say "void" to activate */}
+        <div className="flex flex-col items-center" style={{ position: "relative" }}>
+          <ContinuousVoice
+            onCommand={handleVoiceCommand}
+            wakeWord="void"
+            wakeResponse="Yes captain, what do you need?"
           />
-          <div
-            className="mt-1 text-[9px] text-center"
-            style={{ color: "var(--void-faint)" }}
-          >
-            Voice
-          </div>
         </div>
       </div>
 
