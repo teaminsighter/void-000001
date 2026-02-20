@@ -4,12 +4,26 @@ import path from 'path';
 
 const DISPLAY_FILE = path.join(process.cwd(), 'data', 'agent-display.json');
 
+export interface DisplayStyle {
+  fontFamily?: 'default' | 'serif' | 'mono' | 'cursive' | 'arabic' | 'devanagari' | 'japanese';
+  fontSize?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+  textColor?: string;
+  backgroundColor?: string;
+  textAlign?: 'left' | 'center' | 'right';
+  direction?: 'ltr' | 'rtl';
+  animation?: 'none' | 'fade' | 'slide' | 'pulse' | 'glow' | 'typewriter';
+  gradient?: string;
+  borderStyle?: 'none' | 'solid' | 'dashed' | 'glow' | 'neon';
+  borderColor?: string;
+}
+
 export interface AgentDisplayContent {
   type: 'quote' | 'image' | 'note' | 'graph' | 'motivation' | 'empty';
   title?: string;
   content?: string;
   imageUrl?: string;
   author?: string;
+  style?: DisplayStyle;
   updatedAt: string;
 }
 

@@ -392,11 +392,13 @@ async function executeTool(
           content: input.content as string | undefined,
           author: input.author as string | undefined,
           imageUrl: input.imageUrl as string | undefined,
+          style: input.style as Record<string, unknown> | undefined,
           updatedAt: new Date().toISOString(),
         };
         await fs.writeFile(displayPath, JSON.stringify(content, null, 2));
         const typeLabel = input.type === 'quote' || input.type === 'motivation' ? 'quote' : input.type;
-        return { result: `Dashboard display updated: ${typeLabel}${input.title ? ` - "${input.title}"` : ''}`, success: true };
+        const styleInfo = input.style ? ' (with custom styling)' : '';
+        return { result: `Dashboard display updated: ${typeLabel}${input.title ? ` - "${input.title}"` : ''}${styleInfo}`, success: true };
       }
 
       default:

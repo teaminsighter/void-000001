@@ -3,13 +3,124 @@
 import { useState, useEffect, useCallback } from "react";
 import { onDataChanged } from "@/lib/events";
 
+interface DisplayStyle {
+  fontFamily?: "default" | "serif" | "mono" | "cursive" | "arabic" | "devanagari" | "japanese";
+  fontSize?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl";
+  textColor?: string;
+  backgroundColor?: string;
+  textAlign?: "left" | "center" | "right";
+  direction?: "ltr" | "rtl";
+  animation?: "none" | "fade" | "slide" | "pulse" | "glow" | "typewriter";
+  gradient?: string;
+  borderStyle?: "none" | "solid" | "dashed" | "glow" | "neon";
+  borderColor?: string;
+}
+
 interface AgentDisplayContent {
   type: "quote" | "image" | "note" | "graph" | "motivation" | "empty";
   title?: string;
   content?: string;
   imageUrl?: string;
   author?: string;
+  style?: DisplayStyle;
   updatedAt: string;
+}
+
+// Font family mappings
+const FONT_FAMILIES: Record<string, string> = {
+  default: "var(--font-sans), system-ui, sans-serif",
+  serif: "Georgia, 'Times New Roman', serif",
+  mono: "'JetBrains Mono', 'Fira Code', monospace",
+  cursive: "'Dancing Script', 'Pacifico', cursive",
+  arabic: "'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif",
+  devanagari: "'Noto Sans Devanagari', 'Poppins', sans-serif",
+  japanese: "'Noto Sans JP', 'Hiragino Sans', sans-serif",
+};
+
+// Font size mappings
+const FONT_SIZES: Record<string, number> = {
+  xs: 10,
+  sm: 12,
+  md: 14,
+  lg: 18,
+  xl: 24,
+  "2xl": 30,
+  "3xl": 36,
+};
+
+// Animation CSS keyframes
+const ANIMATION_STYLES = `
+@keyframes displayFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes displaySlide {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes displayPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+@keyframes displayGlow {
+  0%, 100% { filter: drop-shadow(0 0 5px var(--void-accent)); }
+  50% { filter: drop-shadow(0 0 20px var(--void-accent)); }
+}
+@keyframes displayTypewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+@keyframes neonFlicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+    box-shadow: 0 0 10px var(--neon-color), 0 0 20px var(--neon-color), 0 0 30px var(--neon-color);
+  }
+  20%, 24%, 55% {
+    box-shadow: none;
+  }
+}
+`;
+
+// Get animation style
+function getAnimationStyle(animation?: string): React.CSSProperties {
+  if (!animation || animation === "none") return {};
+
+  const animations: Record<string, string> = {
+    fade: "displayFade 0.6s ease-out",
+    slide: "displaySlide 0.5s ease-out",
+    pulse: "displayPulse 2s ease-in-out infinite",
+    glow: "displayGlow 2s ease-in-out infinite",
+    typewriter: "displayTypewriter 2s steps(40, end)",
+  };
+
+  return { animation: animations[animation] || "" };
+}
+
+// Get border style
+function getBorderStyle(style?: DisplayStyle): React.CSSProperties {
+  if (!style?.borderStyle || style.borderStyle === "none") return {};
+
+  const color = style.borderColor || "var(--void-accent)";
+
+  switch (style.borderStyle) {
+    case "solid":
+      return { border: `2px solid ${color}` };
+    case "dashed":
+      return { border: `2px dashed ${color}` };
+    case "glow":
+      return {
+        border: `1px solid ${color}`,
+        boxShadow: `0 0 10px ${color}, 0 0 20px ${color}40`
+      };
+    case "neon":
+      return {
+        border: `2px solid ${color}`,
+        boxShadow: `0 0 10px ${color}, 0 0 20px ${color}, 0 0 30px ${color}`,
+        animation: "neonFlicker 1.5s infinite alternate",
+        ["--neon-color" as string]: color,
+      };
+    default:
+      return {};
+  }
 }
 
 export default function HomeRightPanel() {
@@ -47,11 +158,24 @@ export default function HomeRightPanel() {
     );
   }
 
+  // Build container style from display style
+  const containerStyle: React.CSSProperties = {
+    background: display?.style?.gradient || display?.style?.backgroundColor || "var(--void-surface)",
+    border: "1px solid var(--void-border)",
+    borderRadius: 12,
+    overflow: "hidden",
+    ...getBorderStyle(display?.style),
+    ...getAnimationStyle(display?.style?.animation),
+  };
+
   return (
     <div
       className="flex flex-col h-full"
       style={{ padding: 20 }}
     >
+      {/* Inject animation styles */}
+      <style dangerouslySetInnerHTML={{ __html: ANIMATION_STYLES }} />
+
       {/* Header */}
       <div
         style={{
@@ -79,15 +203,7 @@ export default function HomeRightPanel() {
       </div>
 
       {/* Content Area */}
-      <div
-        className="flex-1 flex flex-col"
-        style={{
-          background: "var(--void-surface)",
-          border: "1px solid var(--void-border)",
-          borderRadius: 12,
-          overflow: "hidden",
-        }}
-      >
+      <div className="flex-1 flex flex-col" style={containerStyle}>
         {!display || display.type === "empty" ? (
           <EmptyState />
         ) : display.type === "quote" || display.type === "motivation" ? (
@@ -164,20 +280,32 @@ function EmptyState() {
 }
 
 function QuoteDisplay({ display }: { display: AgentDisplayContent }) {
+  const style = display.style || {};
+  const fontFamily = FONT_FAMILIES[style.fontFamily || "default"];
+  const fontSize = FONT_SIZES[style.fontSize || "lg"];
+  const textColor = style.textColor || "var(--void-white)";
+  const textAlign = style.textAlign || "center";
+  const direction = style.direction || "ltr";
+
   return (
     <div
-      className="flex-1 flex flex-col items-center justify-center text-center"
-      style={{ padding: 28 }}
+      className="flex-1 flex flex-col items-center justify-center"
+      style={{
+        padding: 28,
+        textAlign,
+        direction,
+      }}
     >
       {display.title && (
         <div
           style={{
             fontSize: 10,
             fontWeight: 600,
-            color: "var(--void-accent)",
+            color: style.textColor ? `${textColor}99` : "var(--void-accent)",
             textTransform: "uppercase",
             letterSpacing: 1,
             marginBottom: 16,
+            fontFamily,
           }}
         >
           {display.title}
@@ -186,21 +314,22 @@ function QuoteDisplay({ display }: { display: AgentDisplayContent }) {
       <div
         style={{
           fontSize: 32,
-          color: "var(--void-accent)",
+          color: style.textColor || "var(--void-accent)",
           marginBottom: 12,
           opacity: 0.5,
         }}
       >
-        "
+        {direction === "rtl" ? "«" : "\u201C"}
       </div>
       <div
         style={{
-          fontSize: 15,
+          fontSize,
           fontWeight: 500,
-          color: "var(--void-white)",
-          lineHeight: 1.6,
-          maxWidth: 280,
+          color: textColor,
+          lineHeight: 1.7,
+          maxWidth: 320,
           marginBottom: 16,
+          fontFamily,
         }}
       >
         {display.content}
@@ -209,8 +338,9 @@ function QuoteDisplay({ display }: { display: AgentDisplayContent }) {
         <div
           style={{
             fontSize: 12,
-            color: "var(--void-muted)",
+            color: style.textColor ? `${textColor}AA` : "var(--void-muted)",
             fontStyle: "italic",
+            fontFamily,
           }}
         >
           — {display.author}
@@ -274,18 +404,26 @@ function ImageDisplay({ display }: { display: AgentDisplayContent }) {
 }
 
 function NoteDisplay({ display }: { display: AgentDisplayContent }) {
+  const style = display.style || {};
+  const fontFamily = FONT_FAMILIES[style.fontFamily || "default"];
+  const fontSize = FONT_SIZES[style.fontSize || "md"];
+  const textColor = style.textColor || "var(--void-text)";
+  const textAlign = style.textAlign || "left";
+  const direction = style.direction || "ltr";
+
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col" style={{ direction }}>
       <div
         style={{
           padding: "12px 16px",
           borderBottom: "1px solid var(--void-border)",
           fontSize: 12,
           fontWeight: 500,
-          color: "var(--void-text)",
+          color: textColor,
           display: "flex",
           alignItems: "center",
           gap: 8,
+          fontFamily,
         }}
       >
         <span style={{ fontSize: 14 }}>📝</span>
@@ -295,10 +433,12 @@ function NoteDisplay({ display }: { display: AgentDisplayContent }) {
         className="flex-1 overflow-auto"
         style={{
           padding: 16,
-          fontSize: 13,
-          color: "var(--void-text)",
+          fontSize,
+          color: textColor,
           lineHeight: 1.7,
           whiteSpace: "pre-wrap",
+          fontFamily,
+          textAlign,
         }}
       >
         {display.content || "No content"}

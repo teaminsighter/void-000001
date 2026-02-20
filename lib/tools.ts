@@ -584,7 +584,7 @@ export const VOID_TOOLS: Tool[] = [
   // ── Dashboard Display ─────────────────
   {
     name: 'display_set',
-    description: 'Display content on the dashboard right panel. Use when the user asks to show a quote, motivation, image, note, or graph on the dashboard.',
+    description: 'Display styled content on the dashboard right panel. Supports custom fonts, colors, sizes, animations, and RTL languages. Use when the user asks to show a quote, motivation, image, note, or graph on the dashboard.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -599,7 +599,7 @@ export const VOID_TOOLS: Tool[] = [
         },
         content: {
           type: 'string',
-          description: 'The main text content (quote text, note content, etc.)',
+          description: 'The main text content (quote text, note content, etc.). Supports any language including Arabic, Hindi, Japanese, etc.',
         },
         author: {
           type: 'string',
@@ -608,6 +608,59 @@ export const VOID_TOOLS: Tool[] = [
         imageUrl: {
           type: 'string',
           description: 'URL for image display type',
+        },
+        // ── Styling Options ──
+        style: {
+          type: 'object',
+          description: 'Custom styling for the display',
+          properties: {
+            fontFamily: {
+              type: 'string',
+              enum: ['default', 'serif', 'mono', 'cursive', 'arabic', 'devanagari', 'japanese'],
+              description: 'Font family to use',
+            },
+            fontSize: {
+              type: 'string',
+              enum: ['xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl'],
+              description: 'Text size (xs=10px to 3xl=36px)',
+            },
+            textColor: {
+              type: 'string',
+              description: 'Text color - use CSS color names (red, blue), hex (#FF5500), or rgb(255,85,0)',
+            },
+            backgroundColor: {
+              type: 'string',
+              description: 'Background color - use CSS color names, hex, or rgb',
+            },
+            textAlign: {
+              type: 'string',
+              enum: ['left', 'center', 'right'],
+              description: 'Text alignment',
+            },
+            direction: {
+              type: 'string',
+              enum: ['ltr', 'rtl'],
+              description: 'Text direction - use rtl for Arabic, Hebrew, Persian, Urdu',
+            },
+            animation: {
+              type: 'string',
+              enum: ['none', 'fade', 'slide', 'pulse', 'glow', 'typewriter'],
+              description: 'Entry animation effect',
+            },
+            gradient: {
+              type: 'string',
+              description: 'CSS gradient for background (e.g. "linear-gradient(135deg, #667eea 0%, #764ba2 100%)")',
+            },
+            borderStyle: {
+              type: 'string',
+              enum: ['none', 'solid', 'dashed', 'glow', 'neon'],
+              description: 'Border style around content',
+            },
+            borderColor: {
+              type: 'string',
+              description: 'Border color - CSS color value',
+            },
+          },
         },
       },
       required: ['type'],
