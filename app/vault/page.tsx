@@ -90,7 +90,7 @@ export default function VaultPage() {
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 1000 }}>
+    <div style={{ padding: 24 }}>
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
         <h1 className="void-heading">
