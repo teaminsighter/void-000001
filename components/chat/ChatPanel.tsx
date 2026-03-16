@@ -5,7 +5,7 @@ import { Message, ToolAction, Attachment } from "@/lib/types";
 import { emitDataChanged, toolToEventType } from "@/lib/events";
 import ChatMessage from "./ChatMessage";
 import QuickPrompts from "./QuickPrompts";
-import VoiceButton from "./VoiceButton";
+import InlineVoiceButton from "./InlineVoiceButton";
 import FileUpload from "./FileUpload";
 
 interface ChatPanelProps {
@@ -150,14 +150,31 @@ export default function ChatPanel({
         attachments: currentAttachments,
       };
 
-      // Try streaming first
+      // Try streaming first with timeout fallback
       let streamed = false;
       let streamingStarted = false;
+      const STREAM_TIMEOUT_MS = 15000; // 15 seconds to receive first event
+
       try {
+        const abortController = new AbortController();
+        let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+          if (!streamingStarted) {
+            abortController.abort();
+          }
+        }, STREAM_TIMEOUT_MS);
+
+        const clearStreamTimeout = () => {
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+        };
+
         const response = await fetch("/api/chat-stream", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(chatPayload),
+          signal: abortController.signal,
         });
 
         if (response.ok && response.body) {
@@ -178,6 +195,9 @@ export default function ChatPanel({
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
+
+            // Clear timeout once we start receiving data
+            clearStreamTimeout();
 
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split("\n");
@@ -205,6 +225,17 @@ export default function ChatPanel({
                       result: data.result,
                       success: data.success,
                     });
+                  } else if (eventType === "error") {
+                    // Handle API errors
+                    streamingStarted = true; // Mark as started so we don't double-fallback
+                    const errorMsg = data.message || "An error occurred";
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === aiMessageId
+                          ? { ...m, content: `Error: ${errorMsg}` }
+                          : m
+                      )
+                    );
                   } else if (eventType === "done") {
                     // Merge final actions
                     const finalActions = data.actions?.length > 0
@@ -246,15 +277,25 @@ export default function ChatPanel({
             }
           }
 
-          // Persist
+          // Clean up timeout and persist
+          clearStreamTimeout();
           await persistMessage(convId, {
             id: aiMessageId,
             role: "assistant",
             content: streamedText || "...",
           });
+        } else {
+          clearStreamTimeout();
         }
       } catch (streamErr) {
-        if (streamingStarted) {
+        // Check if this was a timeout abort (no events received)
+        const isTimeout = streamErr instanceof Error && streamErr.name === "AbortError";
+        if (isTimeout && !streamingStarted) {
+          console.warn("Stream timeout - falling back to non-streaming API");
+          streamed = false;
+          // Remove the placeholder message we added
+          setMessages((prev) => prev.filter((m) => m.id !== aiMessageId));
+        } else if (streamingStarted) {
           // Stream broke after tokens were received — mark as incomplete, don't duplicate via non-streaming
           streamed = true;
           setMessages((prev) =>
@@ -360,10 +401,10 @@ export default function ChatPanel({
                 marginBottom: 4,
               }}
             >
-              Hi, I&apos;m Void.
+              Yo, I&apos;m Zoro.
             </div>
             <div style={{ fontSize: 13, marginBottom: 24 }}>
-              Type to begin.
+              What do you need?
             </div>
 
             {/* Quick prompt pills */}
@@ -419,7 +460,7 @@ export default function ChatPanel({
                       letterSpacing: 0.5,
                     }}
                   >
-                    AGENT
+                    ZORO
                   </div>
                   <div
                     className="flex items-center gap-1"
@@ -536,7 +577,7 @@ export default function ChatPanel({
               fontFamily: "inherit",
             }}
           />
-          <VoiceButton
+          <InlineVoiceButton
             onTranscript={(text) => sendMessage(text)}
             disabled={isLoading}
           />
