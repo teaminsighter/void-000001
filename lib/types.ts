@@ -197,4 +197,5 @@ export const PAGES: PageConfig[] = [
   { id: 'research', path: '/research', icon: '◎', label: 'Research' },
   { id: 'saved', path: '/saved', icon: '◆', label: 'Saved' },
   { id: 'bots', path: '/bots', icon: '⚡', label: 'Bots' },
+  { id: 'settings', path: '/settings', icon: '⚙', label: 'Settings' },
 ];

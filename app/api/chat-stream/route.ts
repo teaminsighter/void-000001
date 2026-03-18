@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
-import { streamChatWithTools } from '@/lib/anthropic';
+import { getCurrentProvider } from '@/lib/ai';
 import { search, buildContext } from '@/lib/khoj';
+import type { ToolDefinition } from '@/lib/ai/types';
 import { buildPrompt } from '@/lib/prompts';
 import { appendToLog, writeFile, readFile, listFiles, moveFile, softDelete, listVersions, restoreVersion } from '@/lib/vault';
 import { triggerWorkflow } from '@/lib/n8n';
@@ -443,10 +444,24 @@ export async function POST(request: NextRequest) {
         };
 
         try {
-          const { toolResults } = await streamChatWithTools(
+          // Get current AI provider
+          const provider = await getCurrentProvider();
+
+          // Convert VOID_TOOLS to ToolDefinition format
+          const tools: ToolDefinition[] = VOID_TOOLS.map(t => ({
+            name: t.name,
+            description: t.description || '',
+            inputSchema: {
+              type: 'object' as const,
+              properties: (t.input_schema.properties || {}) as Record<string, unknown>,
+              required: t.input_schema.required ?? undefined,
+            },
+          }));
+
+          const { toolResults } = await provider.streamChatWithTools(
             messages,
             systemPrompt,
-            VOID_TOOLS,
+            tools,
             executeTool,
             {
               onToken: (text) => send('token', { text }),

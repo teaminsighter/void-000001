@@ -91,9 +91,44 @@ function getDb(): Database.Database {
       ON gmail_emails(status, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_gmail_emails_category
       ON gmail_emails(category, priority);
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key         TEXT PRIMARY KEY,
+      value       TEXT NOT NULL,
+      updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   return db;
+}
+
+// ── Settings ──────────────────────────
+
+export function getSetting(key: string): string | undefined {
+  const stmt = getDb().prepare("SELECT value FROM settings WHERE key = ?");
+  const row = stmt.get(key) as { value: string } | undefined;
+  return row?.value;
+}
+
+export function setSetting(key: string, value: string): void {
+  const stmt = getDb().prepare(`
+    INSERT INTO settings (key, value, updated_at)
+    VALUES (?, ?, datetime('now'))
+    ON CONFLICT(key) DO UPDATE SET
+      value = excluded.value,
+      updated_at = datetime('now')
+  `);
+  stmt.run(key, value);
+}
+
+export function getAllSettings(): Record<string, string> {
+  const stmt = getDb().prepare("SELECT key, value FROM settings");
+  const rows = stmt.all() as { key: string; value: string }[];
+  const result: Record<string, string> = {};
+  for (const row of rows) {
+    result[row.key] = row.value;
+  }
+  return result;
 }
 
 // ── Conversations ──────────────────────
